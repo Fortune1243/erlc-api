@@ -1,0 +1,6 @@
+BASE_URL = "https://api.policeroleplay.community"
+DEFAULT_TIMEOUT_S = 20.0
+
+DEFAULT_MAX_RETRIES = 4
+DEFAULT_BACKOFF_BASE_S = 0.6
+DEFAULT_BACKOFF_CAP_S = 8.0

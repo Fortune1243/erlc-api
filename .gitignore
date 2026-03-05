@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Test/cache artifacts
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local secrets and env files
+.env
+.env.*
+*.local
+secrets/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+
+# Local tooling binaries
+rg.exe
+ripgrep-*/

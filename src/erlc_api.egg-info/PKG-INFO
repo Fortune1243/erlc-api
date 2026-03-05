@@ -1,0 +1,85 @@
+Metadata-Version: 2.4
+Name: erlc-api
+Version: 1.0.1
+Summary: Async Python wrapper for ER:LC PRC Private Server API (v1 + v2)
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: httpx>=0.27.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: mypy>=1.8; extra == "dev"
+Requires-Dist: ruff>=0.3; extra == "dev"
+
+# erlc-api
+
+Async Python wrapper for the ER:LC PRC Private Server API (v1 + v2).
+
+## Installation
+
+Editable install:
+
+```bash
+pip install -e .
+```
+
+Dev install (tests, lint/type tooling):
+
+```bash
+pip install -e .[dev]
+```
+
+## Quickstart
+
+```python
+import asyncio
+from erlc_api import ERLCClient
+
+
+async def main() -> None:
+    client = ERLCClient()
+    await client.start()
+    try:
+        ctx = client.ctx("your-server-key")
+        print(await client.v1.server(ctx))
+        print(await client.v2.server_default(ctx))
+    finally:
+        await client.close()
+
+
+asyncio.run(main())
+```
+
+## Key Validation
+
+Use `validate_key` for setup flows. It does not raise for expected key failures.
+
+```python
+result = await client.validate_key(ctx)
+print(result.status, result.retry_after, result.api_status)
+```
+
+## Error Taxonomy
+
+| Error | When raised | Notes |
+|---|---|---|
+| `AuthError` | 401/403 | Authentication/authorization failure |
+| `RateLimitError` | 429 | Includes `retry_after` when available |
+| `NotFoundError` | 404 | Resource/path not found |
+| `APIError` | Other non-2xx responses | Exposes status and safe body excerpt |
+| `NetworkError` | Timeout/DNS/connection issues | Transport-level failures |
+
+## Multi-Server Model
+
+- Use one `ERLCClient` and create per-server contexts with `client.ctx(server_key)`.
+- Rate limiting is isolated per server key and bucket, so one server key does not throttle another.
+- Logs never include full server keys; only safe fingerprints are emitted.
+
+## Smoke Test
+
+Set your key via environment variable and run:
+
+```bash
+export ERLC_SERVER_KEY="your-server-key"  # PowerShell: $env:ERLC_SERVER_KEY="..."
+python scripts/smoke.py
+```
