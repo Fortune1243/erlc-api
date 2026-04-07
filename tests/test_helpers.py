@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from erlc_api import ERLCClient
+from erlc_api.context import ERLCContext, fingerprint_key
 from erlc_api.helpers import ParsedLogCommand, extract_log_commands, fetch_log_commands
 
 
@@ -106,3 +107,28 @@ async def test_fetch_log_commands_returns_empty_for_non_list_response() -> None:
     result = await fetch_log_commands(api, ctx)
 
     assert result == []
+
+
+def test_fingerprint_key_returns_empty_marker_for_blank_keys() -> None:
+    assert fingerprint_key("   ") == "empty(len=0)"
+
+
+def test_fingerprint_key_masks_short_keys_without_leaking_secret() -> None:
+    value = fingerprint_key("abcd")
+
+    assert value == "sha256:88d4266fd4e6338d(len=4)"
+    assert "abcd" not in value
+
+
+def test_fingerprint_key_masks_normal_length_keys_without_leaking_secret() -> None:
+    value = fingerprint_key("abcdefghijk")
+
+    assert value == "sha256:ca2f2069ea0c6e46(len=11)"
+    assert "abcdefghijk" not in value
+
+
+def test_context_repr_does_not_include_raw_short_key() -> None:
+    rendered = repr(ERLCContext(server_key="abcd"))
+
+    assert "abcd" not in rendered
+    assert "sha256:88d4266fd4e6338d(len=4)" in rendered

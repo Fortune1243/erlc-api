@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import dataclass, field
+from email.utils import parsedate_to_datetime
+import importlib.metadata as importlib_metadata
 import logging
 import time
-from dataclasses import dataclass
+from datetime import timezone
 from typing import Any, Mapping, Optional
 
 import httpx
@@ -17,6 +20,14 @@ from ._ratelimit import RateLimiter
 logger = logging.getLogger(__name__)
 
 
+def _default_user_agent() -> str:
+    try:
+        package_version = importlib_metadata.version("erlc-api")
+    except importlib_metadata.PackageNotFoundError:
+        package_version = "0+unknown"
+    return f"erlc-api-python/{package_version}"
+
+
 @dataclass
 class ClientConfig:
     base_url: str = BASE_URL
@@ -24,7 +35,7 @@ class ClientConfig:
     max_retries: int = DEFAULT_MAX_RETRIES
     backoff_base_s: float = DEFAULT_BACKOFF_BASE_S
     backoff_cap_s: float = DEFAULT_BACKOFF_CAP_S
-    user_agent: str = "erlc-api-python/1.0.1"
+    user_agent: str = field(default_factory=_default_user_agent)
 
 def _parse_int(v: Optional[str]) -> Optional[int]:
     try:
@@ -51,9 +62,19 @@ async def _sleep_backoff(attempt: int, base: float, cap: float) -> None:
 
 
 def _parse_retry_after(resp: httpx.Response, raw: Any) -> float | None:
-    retry_header = _parse_float(resp.headers.get("Retry-After"))
+    retry_after_header = resp.headers.get("Retry-After")
+    retry_header = _parse_float(retry_after_header)
     if retry_header is not None:
         return max(0.0, retry_header)
+    if retry_after_header is not None:
+        try:
+            retry_at = parsedate_to_datetime(retry_after_header)
+        except (TypeError, ValueError, IndexError, OverflowError):
+            retry_at = None
+        if retry_at is not None:
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=timezone.utc)
+            return max(0.0, retry_at.timestamp() - time.time())
     if isinstance(raw, dict):
         candidate = raw.get("retry_after") or raw.get("retryAfter") or raw.get("retry")
         try:
@@ -127,8 +148,9 @@ class AsyncHTTP:
         template = path_template or path
         key_fingerprint = fingerprint_key(headers.get("Server-Key", ""))
 
-        # Non idempotent calls should not be retried on network or 5xx.
-        max_attempts = self.config.max_retries if idempotent else 1
+        # max_retries is the number of extra attempts after the initial request.
+        retry_count = max(0, self.config.max_retries) if idempotent else 0
+        max_attempts = 1 + retry_count
 
         for attempt in range(1, max_attempts + 1):
             bucket_guess = await self._resolve_bucket(key_id=key_id, method=method_u, path=template)
@@ -202,7 +224,7 @@ class AsyncHTTP:
                     )
 
                     # 429 is safe to retry because the server rejected the request.
-                    if attempt < self.config.max_retries:
+                    if attempt < max_attempts:
                         if retry_after_s is not None:
                             await asyncio.sleep(max(0.0, retry_after_s))
                             continue

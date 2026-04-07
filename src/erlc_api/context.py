@@ -5,19 +5,17 @@ from dataclasses import dataclass
 import hashlib
 
 
+def _fingerprint(server_key: str) -> str:
+    # Stable, non reversible identifier for internal maps
+    return hashlib.sha256(server_key.encode("utf-8")).hexdigest()[:16]
+
+
 def fingerprint_key(server_key: str) -> str:
     """Return a short printable key fingerprint safe for logs."""
     key = (server_key or "").strip()
     if not key:
         return "empty(len=0)"
-    if len(key) <= 8:
-        return f"{key[:4]}...{key[-4:]}(len={len(key)})"
-    return f"{key[:4]}...{key[-4:]}(len={len(key)})"
-
-
-def _fingerprint(server_key: str) -> str:
-    # Stable, non reversible identifier for internal maps
-    return hashlib.sha256(server_key.encode("utf-8")).hexdigest()[:16]
+    return f"sha256:{_fingerprint(key)}(len={len(key)})"
 
 @dataclass(frozen=True)
 class ERLCContext:
