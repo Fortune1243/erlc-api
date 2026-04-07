@@ -87,3 +87,46 @@ async def test_validate_key_blank_key_raises() -> None:
     api = ERLCClient()
     with pytest.raises(ValueError):
         await api.validate_key(api.ctx("   "))
+
+
+@pytest.mark.asyncio
+async def test_v1_command_rejects_log_command_without_request() -> None:
+    api = ERLCClient()
+    ctx = api.ctx("abcd1234")
+    called = False
+
+    async def fake_request(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        return {"ok": True}
+
+    api.v1._request = fake_request  # type: ignore[method-assign]
+
+    with pytest.raises(ValueError, match=":log"):
+        await api.v1.command(ctx, "  :LoG incident external-review-started")
+
+    assert called is False
+
+
+@pytest.mark.asyncio
+async def test_v1_command_allows_non_log_command() -> None:
+    api = ERLCClient()
+    ctx = api.ctx("abcd1234")
+    seen: dict[str, object] = {}
+
+    async def fake_request(*args, **kwargs):
+        seen["args"] = args
+        seen["kwargs"] = kwargs
+        return {"ok": True}
+
+    api.v1._request = fake_request  # type: ignore[method-assign]
+
+    result = await api.v1.command(ctx, ":help")
+
+    assert result == {"ok": True}
+    assert seen["args"] == (ctx, "POST", "/v1/server/command")
+    assert seen["kwargs"] == {
+        "path_template": "/v1/server/command",
+        "json": {"command": ":help"},
+        "idempotent": False,
+    }

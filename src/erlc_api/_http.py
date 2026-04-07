@@ -24,7 +24,7 @@ class ClientConfig:
     max_retries: int = DEFAULT_MAX_RETRIES
     backoff_base_s: float = DEFAULT_BACKOFF_BASE_S
     backoff_cap_s: float = DEFAULT_BACKOFF_CAP_S
-    user_agent: str = "erlc-api-python/1.1.0"
+    user_agent: str = "erlc-api-python/1.0.1"
 
 def _parse_int(v: Optional[str]) -> Optional[int]:
     try:

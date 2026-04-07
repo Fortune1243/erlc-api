@@ -13,6 +13,11 @@ class V1:
     _request: RequestFn
 
     async def command(self, ctx: ERLCContext, command: str) -> Any:
+        stripped = command.lstrip()
+        lowered = stripped.lower()
+        if lowered == ":log" or (lowered.startswith(":log") and len(lowered) > 4 and lowered[4].isspace()):
+            raise ValueError("The :log command is not supported by this wrapper.")
+
         return await self._request(
             ctx,
             "POST",
