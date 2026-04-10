@@ -1,52 +1,61 @@
 # Error Handling and Troubleshooting
 
-Treat external API failures as normal runtime states. `erlc-api` provides explicit error types so recovery logic is clean.
+Treat API/transport failures as normal runtime states and branch on structured exception types.
 
 ## Exception map
 
 | Exception | Meaning | Typical action |
 |---|---|---|
-| `AuthError` | Invalid/unauthorized key or insufficient permission | Verify key, key scope, and target server |
-| `RateLimitError` | Rate limited response | Back off and retry after suggested delay |
-| `NetworkError` | Transport-level failure | Retry idempotent flows and inspect network path |
-| `APIError` | Other non-success API status | Log status/body excerpt and handle by status |
-| `NotFoundError` | Requested API path/resource not found | Verify endpoint and API support |
-| `ModelDecodeError` | Typed top-level payload shape mismatch | Fallback to raw mode + log payload shape |
+| `AuthError` | Invalid/unauthorized key | Re-check key and access |
+| `PermissionDeniedError` | Authenticated but insufficient permission | Adjust role/scope |
+| `RateLimitError` | Bucket-limited request | Retry using hints/backoff |
+| `CircuitOpenError` | Circuit breaker open for bucket | Delay and retry later |
+| `NetworkError` | Transport failure | Retry idempotent flows |
+| `PlayerNotFoundError` | Target player not present | Re-resolve target |
+| `ServerEmptyError` | No data/players for request | Handle empty-state UI/logic |
+| `InvalidCommandError` | Command syntax rejected | Validate/build command |
+| `RobloxCommunicationError` | Upstream Roblox communication failure | Retry/degrade gracefully |
+| `APIError` | Other non-success API status | Log + status-based handling |
+| `ModelDecodeError` | Typed top-level payload mismatch | Fallback to raw/validated path |
 
 ## Recommended boundary pattern
 
 ```python
-from erlc_api import APIError, AuthError, ModelDecodeError, NetworkError, RateLimitError
+from erlc_api import (
+    APIError,
+    AuthError,
+    CircuitOpenError,
+    ModelDecodeError,
+    NetworkError,
+    RateLimitError,
+)
 
 try:
     data = await client.v2.server_default_typed(ctx)
 except AuthError:
-    # mark configuration invalid
     ...
-except RateLimitError as exc:
-    # schedule retry based on retry hints
+except (RateLimitError, CircuitOpenError):
     ...
 except NetworkError:
-    # retry with backoff in caller
     ...
 except ModelDecodeError:
-    # fallback to raw endpoint if needed
     data = await client.v2.server_default(ctx)
-except APIError as exc:
-    # generic structured handling
+except APIError:
     ...
 ```
 
 ## Common issues
 
 1. `RuntimeError: HTTP client not started`
-   - Fix: call `await client.start()` before requests.
+   - Use `await client.start()` or `async with ERLCClient() as client`.
 2. Repeated auth failures
-   - Fix: validate keys with `await client.validate_key(ctx)` during setup.
-3. Unexpected typed decoding errors
-   - Fix: log payload shape, switch to raw temporarily, update parser assumptions.
+   - Check `await client.validate_key(ctx)`.
+3. Unexpected command result ambiguity
+   - Use `command_with_tracking(...)` and inspect `inferred_success` + correlation flags.
+4. Cache confusion during testing
+   - Use `await client.invalidate(ctx)` or `await client.clear_cache()`.
 
 ## Next Steps
 
-- Return to onboarding via [Getting-Started.md](./Getting-Started.md)
-- Check frequent questions in [FAQ.md](./FAQ.md)
+- Return to onboarding: [Getting-Started.md](./Getting-Started.md)
+- Reliability details: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

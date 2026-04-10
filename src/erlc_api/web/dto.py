@@ -4,14 +4,46 @@ from typing import Any
 
 from ..models import (
     CommandLogEntry,
+    EmergencyCall,
     ModCallEntry,
     Player,
+    PlayerLocation,
     QueueEntry,
     ServerInfo,
     StaffMember,
     V2ServerBundle,
     Vehicle,
+    VehicleColor,
 )
+
+
+def location_to_dto(location: PlayerLocation) -> dict[str, Any]:
+    return {
+        "location_x": location.location_x,
+        "location_z": location.location_z,
+        "postal_code": location.postal_code,
+        "street_name": location.street_name,
+        "building_number": location.building_number,
+        "extra": dict(location.extra),
+    }
+
+
+def vehicle_color_to_dto(color: VehicleColor) -> dict[str, Any]:
+    return {
+        "color_hex": color.color_hex,
+        "color_name": color.color_name,
+        "extra": dict(color.extra),
+    }
+
+
+def emergency_call_to_dto(call: EmergencyCall) -> dict[str, Any]:
+    return {
+        "team": call.team,
+        "caller": call.caller,
+        "position": list(call.position) if call.position is not None else None,
+        "started_at": call.started_at,
+        "extra": dict(call.extra),
+    }
 
 
 def player_to_dto(player: Player) -> dict[str, Any]:
@@ -117,6 +149,7 @@ def v2_bundle_to_dto(bundle: V2ServerBundle) -> dict[str, Any]:
         "max_players": bundle.max_players,
         "players": players_to_dto(bundle.players) if bundle.players is not None else None,
         "staff": staff_list_to_dto(bundle.staff) if bundle.staff is not None else None,
+        "helpers": staff_list_to_dto(bundle.helpers) if bundle.helpers is not None else None,
         "join_logs": None
         if bundle.join_logs is None
         else [
@@ -143,6 +176,9 @@ def v2_bundle_to_dto(bundle: V2ServerBundle) -> dict[str, Any]:
         "command_logs": command_logs_to_dto(bundle.command_logs) if bundle.command_logs is not None else None,
         "mod_calls": mod_calls_to_dto(bundle.mod_calls) if bundle.mod_calls is not None else None,
         "vehicles": vehicles_to_dto(bundle.vehicles) if bundle.vehicles is not None else None,
+        "emergency_calls": None
+        if bundle.emergency_calls is None
+        else [emergency_call_to_dto(entry) for entry in bundle.emergency_calls],
         "extra": dict(bundle.extra),
     }
 
@@ -150,6 +186,8 @@ def v2_bundle_to_dto(bundle: V2ServerBundle) -> dict[str, Any]:
 __all__ = [
     "command_log_to_dto",
     "command_logs_to_dto",
+    "emergency_call_to_dto",
+    "location_to_dto",
     "mod_call_to_dto",
     "mod_calls_to_dto",
     "player_to_dto",
@@ -160,6 +198,7 @@ __all__ = [
     "staff_list_to_dto",
     "staff_to_dto",
     "v2_bundle_to_dto",
+    "vehicle_color_to_dto",
     "vehicle_to_dto",
     "vehicles_to_dto",
 ]

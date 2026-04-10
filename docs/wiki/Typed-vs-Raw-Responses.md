@@ -1,45 +1,55 @@
 # Typed vs Raw Responses
 
-`erlc-api` gives you both response modes so you can optimize for speed or structure per use case.
+`erlc-api` supports three response modes depending on how strict you want your integration to be.
 
-## Quick decision guide
+## Decision Guide
 
 | Mode | Use when | Tradeoff |
 |---|---|---|
-| Raw (`client.v1.*`, `client.v2.*`) | You need full pass-through JSON control | More manual field handling |
-| Typed (`*_typed`) | You want stable dataclasses and clearer app code | Top-level decode validation can raise `ModelDecodeError` |
+| Raw (`client.v1.*`, `client.v2.*`) | Need full payload pass-through | More manual key handling |
+| Typed dataclass (`*_typed`) | Want stable model attributes + additive parsing | Top-level shape mismatch can raise `ModelDecodeError` |
+| Validated v2 (`*_validated`) | Need schema validation and stricter guarantees | Requires `pydantic` extra |
 
-## Side-by-side example
+## Side-by-side
 
 ```python
 # Raw
 raw_players = await client.v1.players(ctx)
-first_name_raw = raw_players[0].get("Player") if raw_players else None
 
-# Typed
+# Typed dataclass
 typed_players = await client.v1.players_typed(ctx)
-first_name_typed = typed_players[0].name if typed_players else None
+
+# Validated v2 (pydantic)
+bundle = await client.v2.server_default_validated(ctx, strict=False)
 ```
 
-## Decode behavior you can rely on
+## Typed v2 field coverage highlights
 
-- Top-level shape is validated (object vs list).
-- Missing nested fields are set to `None`.
-- Unknown fields are preserved in each model's `extra`.
-- Timestamps remain epoch integers with datetime helper properties.
+- Player location: `PlayerLocation` (`LocationX`, `LocationZ`, `PostalCode`, `StreetName`, `BuildingNumber`)
+- Wanted stars: `Player.wanted_stars`
+- Vehicle color metadata: `Vehicle.color_hex`, `Vehicle.color_name`, `Vehicle.color_info`
+- Helpers tier: `V2ServerBundle.helpers`
+- Emergency calls: `V2ServerBundle.emergency_calls`
 
-## Handling typed decode failures
+## Decode behavior
+
+- Top-level shape validated (object/list)
+- Missing optional fields become `None`
+- Unknown fields preserved in each model `extra`
+- Timestamp helper properties remain available
+
+## Handling decode issues
 
 ```python
 from erlc_api import ModelDecodeError
 
 try:
     bundle = await client.v2.server_default_typed(ctx)
-except ModelDecodeError as exc:
-    print("unexpected payload shape:", exc)
+except ModelDecodeError:
+    bundle_raw = await client.v2.server_default(ctx)
 ```
 
 ## Next Steps
 
-- Learn reliability guarantees in [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)
-- Compare wrapper strengths in [Comparison-and-Why-erlc-api.md](./Comparison-and-Why-erlc-api.md)
+- Reliability controls: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)
+- Endpoint examples: [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)

@@ -1,11 +1,11 @@
 # Getting Started
 
-Use this page to get from zero to first successful ER:LC request quickly.
+Use this page to get from zero to a reliable first integration.
 
 ## Requirements
 
 - Python 3.11+
-- A valid ER:LC server key
+- Valid ER:LC server key
 - Async runtime (`asyncio`)
 
 ## Install
@@ -14,10 +14,18 @@ Use this page to get from zero to first successful ER:LC request quickly.
 pip install git+https://github.com/Fortune1243/erlc-api.git
 ```
 
-For local development:
+Local development:
 
 ```bash
 pip install -e .[dev]
+```
+
+Optional extras:
+
+```bash
+pip install -e .[pydantic]       # validated v2 models
+pip install -e .[redis]          # redis cache backend
+pip install -e .[observability]  # structlog + opentelemetry-api
 ```
 
 ## First Successful Call
@@ -28,33 +36,39 @@ from erlc_api import ERLCClient
 
 
 async def main() -> None:
-    client = ERLCClient()
-    await client.start()
-    try:
+    async with ERLCClient() as client:
         ctx = client.ctx("your-server-key")
         status = await client.v1.server(ctx)
         print(status)
-    finally:
-        await client.close()
 
 
 asyncio.run(main())
 ```
 
-## Choose Your Response Mode
+## Choose Response Mode
 
-- Raw mode: use `client.v1.*` and `client.v2.*` when you want direct JSON pass-through.
-- Typed mode: use `*_typed` methods when you want structured dataclasses and better editor/type support.
+- Raw: `client.v1.*`, `client.v2.*`
+- Typed dataclass: `*_typed`
+- Validated v2 (Pydantic): `*_validated(..., strict=False)`
 
-## Validate Your Key During Setup
+## Validate Keys During Setup
 
 ```python
 result = await client.validate_key(ctx)
 if result.status != "ok":
-    print("key validation failed:", result.status)
+    print("validation failed:", result.status)
+```
+
+## Useful Operational APIs
+
+```python
+print(client.cache_stats())
+print(client.request_replay(limit=10))
+await client.invalidate(ctx, "/v1/server/players")
 ```
 
 ## Next Steps
 
-- Build your bot flow with [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
-- Learn endpoint patterns in [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)
+- Bot path: [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
+- Backend path: [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md)
+- Reliability deep dive: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

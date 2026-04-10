@@ -1,40 +1,45 @@
 # Rate Limits, Retries, and Reliability
 
-This wrapper is intentionally engineered for long-running bot and backend workloads.
+This wrapper is built for long-running bot/backend workloads.
 
-## Reliability behavior
+## Implemented reliability behavior
 
-- Tracks route buckets from ER:LC rate-limit headers.
+- Tracks route buckets from ER:LC `X-RateLimit-*` headers.
 - Isolates limiter state by server key + bucket.
-- Retries safe/idempotent requests on transient failures.
-- Retries `429` responses using server retry hints when available.
-- Does not automatically replay non-idempotent command requests.
+- Uses reset-aware pre-acquire before sending requests.
+- Supports optional per-bucket circuit breaker with half-open probing.
+- Retries idempotent requests for configured categories:
+  - `429` (retry hints / reset timestamp / backoff)
+  - `5xx`
+  - network errors
+- Uses exponential backoff with jitter.
+- Optionally coalesces duplicate in-flight idempotent GET requests.
+- Never auto-replays non-idempotent command requests.
 
-## Why this matters in production
+## Cache behavior
 
-- Fewer burst failures when many guilds/servers share one process.
-- Lower risk of command duplication on unstable networks.
-- Predictable retry behavior for operational dashboards and automations.
+- Optional TTL cache for idempotent GET requests.
+- Default endpoint TTL map provided in config.
+- Manual invalidation via `client.invalidate(...)`.
+- Runtime cache stats via `client.cache_stats()`.
 
-## Polling guidance
+## Key config knobs (`ClientConfig`)
 
-Use consumer-managed async iterators and control interval based on your own workload constraints:
+- `max_retries`, `retry_429`, `retry_5xx`, `retry_network`
+- `backoff_base_s`, `backoff_cap_s`, `backoff_jitter_s`
+- `request_coalescing`
+- `cache_enabled`, `cache_ttl_by_path`, `cache_backend`
+- `circuit_breaker_enabled`, `circuit_failure_threshold`, `circuit_open_s`
+- `debug_dump`, `request_replay_size`
 
-```python
-from erlc_api.utils.polling import poll_server_default
+## Operational guidance
 
-async for snapshot in poll_server_default(client, ctx, interval_s=5.0):
-    if snapshot.diff and snapshot.diff.players:
-        print("joined:", len(snapshot.diff.players.joined))
-```
-
-## Operational recommendations
-
-- Keep `interval_s` conservative in shared deployments.
-- Catch `RateLimitError` and `NetworkError` at integration boundaries.
-- Use one `ERLCClient` process-wide and per-server `ctx(...)` objects.
+- Use one shared `ERLCClient` per process.
+- Create per-server contexts with `client.ctx(...)`.
+- Keep polling intervals conservative in multi-guild/multi-server workloads.
+- Inspect redacted replay entries with `client.request_replay(...)` during incident response.
 
 ## Next Steps
 
-- Implement defensive exception handling in [Error-Handling-and-Troubleshooting.md](./Error-Handling-and-Troubleshooting.md)
-- Review real endpoint examples in [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)
+- Exception handling strategy: [Error-Handling-and-Troubleshooting.md](./Error-Handling-and-Troubleshooting.md)
+- Practical endpoint patterns: [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)

@@ -1,6 +1,8 @@
 from .dto import (
     command_log_to_dto,
     command_logs_to_dto,
+    emergency_call_to_dto,
+    location_to_dto,
     mod_call_to_dto,
     mod_calls_to_dto,
     player_to_dto,
@@ -11,6 +13,7 @@ from .dto import (
     staff_list_to_dto,
     staff_to_dto,
     v2_bundle_to_dto,
+    vehicle_color_to_dto,
     vehicle_to_dto,
     vehicles_to_dto,
 )
@@ -26,10 +29,12 @@ __all__ = [
     "DashboardMetrics",
     "command_log_to_dto",
     "command_logs_to_dto",
+    "emergency_call_to_dto",
     "compute_dashboard_metrics",
     "count_players_by_team",
     "count_staff_by_permission",
     "count_vehicles_by_team",
+    "location_to_dto",
     "mod_call_to_dto",
     "mod_calls_to_dto",
     "player_to_dto",
@@ -40,6 +45,7 @@ __all__ = [
     "staff_list_to_dto",
     "staff_to_dto",
     "v2_bundle_to_dto",
+    "vehicle_color_to_dto",
     "vehicle_to_dto",
     "vehicles_to_dto",
 ]

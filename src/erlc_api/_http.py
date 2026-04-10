@@ -624,6 +624,7 @@ class AsyncHTTP:
                 else:
                     loop = asyncio.get_running_loop()
                     shared_future = loop.create_future()
+                    shared_future.add_done_callback(lambda fut: fut.exception() if not fut.cancelled() else None)
                     self._inflight[request_key] = shared_future
                     owner = True
 

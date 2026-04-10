@@ -1,6 +1,11 @@
 name: Publish Wiki
 
 on:
+  push:
+    branches:
+      - master
+    paths:
+      - docs/wiki/**
   workflow_dispatch:
     inputs:
       commit_message:
@@ -10,6 +15,10 @@ on:
 
 permissions:
   contents: write
+
+concurrency:
+  group: wiki-sync-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   publish:
@@ -28,7 +37,7 @@ jobs:
 
       - name: Publish wiki
         env:
-          WIKI_COMMIT_MESSAGE: ${{ github.event.inputs.commit_message }}
+          WIKI_COMMIT_MESSAGE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.commit_message || format('docs(wiki): sync from docs/wiki (source {0})', github.sha) }}
           REPO_AUTH_URL: https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
         run: |
           bash scripts/publish_wiki.sh \

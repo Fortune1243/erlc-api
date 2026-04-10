@@ -1,42 +1,76 @@
 # Endpoint Usage Cookbook
 
-High-value endpoint patterns you can copy directly.
+High-value endpoint patterns you can use directly.
 
-## Server status
-
-```python
-status = await client.v1.server(ctx)
-print(status)
-```
-
-## Typed players list + filtering
+## v2 selective fetch with fluent builder
 
 ```python
-from erlc_api.utils.filters import filter_players
-
-players = await client.v1.players_typed(ctx)
-police_players = filter_players(players, team="Police")
+bundle = await (
+    client.v2.server_query(ctx)
+    .include_players()
+    .include_staff()
+    .include_helpers()
+    .include_vehicles()
+    .fetch_typed()
+)
 ```
 
-## Queue diff between snapshots
+## v2 validated fetch (pydantic)
 
 ```python
-from erlc_api.utils.diff import diff_queue
-
-before = await client.v1.queue_typed(ctx)
-after = await client.v1.queue_typed(ctx)
-changes = diff_queue(before, after)
-print("joined:", len(changes.joined), "left:", len(changes.left), "moved:", len(changes.moved))
+bundle = await client.v2.server_validated(
+    ctx,
+    players=True,
+    queue=True,
+    strict=False,
+)
 ```
 
-## Remote command execution
+## Command builder + tracking
 
 ```python
-result = await client.v1.command(ctx, ":h Server restart in 5 minutes")
-print(result)
+from erlc_api import CommandBuilder
+
+result = await client.v1.command_with_tracking(
+    ctx,
+    CommandBuilder.pm(target="PlayerName", message="Hello"),
+    timeout_s=8.0,
+)
+print(result.inferred_success, result.timed_out_waiting_for_log)
 ```
 
-Note: this wrapper intentionally blocks `:log` command execution via `client.v1.command(...)`. Use command log retrieval for `:log` workflows.
+## Dry-run command validation
+
+```python
+preview = await client.v1.command(
+    ctx,
+    CommandBuilder.warn(target="PlayerName", reason="Follow rules"),
+    dry_run=True,
+)
+print(preview)
+```
+
+## Stream logs as they arrive
+
+```python
+async for entry in client.v1.command_logs_stream(ctx, since_timestamp=1700000000):
+    print(entry.timestamp, entry.player, entry.command)
+```
+
+## Track server state with callbacks
+
+```python
+async with client.track_server(ctx, interval_s=2.0) as tracker:
+    tracker.on("player_join", lambda p: print("joined", p.name))
+    tracker.on("command_executed", lambda c: print("cmd", c.command))
+```
+
+## Cache controls
+
+```python
+stats = client.cache_stats()
+await client.invalidate(ctx, "/v1/server/players")
+```
 
 ## Parse `:log` payloads from command logs
 
@@ -48,7 +82,9 @@ for item in entries:
     print(item.player, item.payload)
 ```
 
+Note: `client.v1.command(...)` intentionally blocks `:log` execution.
+
 ## Next Steps
 
-- See response tradeoffs in [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
-- Production hardening guide: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)
+- Response mode selection: [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
+- Reliability internals: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

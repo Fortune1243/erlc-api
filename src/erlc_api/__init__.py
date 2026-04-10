@@ -1,22 +1,42 @@
 # src/erlc_api/__init__.py
 from .client import ERLCClient
 from .client import ValidationResult, ValidationStatus
+from .commands import BuiltCommand, CommandBuilder, validate_command_syntax
 from .context import ERLCContext, fingerprint_key
-from ._errors import APIError, AuthError, ERLCError, ModelDecodeError, NetworkError, NotFoundError, RateLimitError
+from ._errors import (
+    APIError,
+    AuthError,
+    CircuitOpenError,
+    ERLCError,
+    InvalidCommandError,
+    ModelDecodeError,
+    NetworkError,
+    NotFoundError,
+    PermissionDeniedError,
+    PlayerNotFoundError,
+    RateLimitError,
+    RobloxCommunicationError,
+    ServerEmptyError,
+)
 from .models import (
     BanEntry,
     CommandLogEntry,
     CommandResponse,
+    EmergencyCall,
     JoinLogEntry,
     KillLogEntry,
     ModCallEntry,
     Player,
+    PlayerLocation,
     QueueEntry,
     ServerInfo,
     StaffMember,
     V2ServerBundle,
     Vehicle,
+    VehicleColor,
 )
+from .tracking import ServerState, ServerTracker
+from .validated import V2ServerBundleValidated, decode_v2_server_bundle_validated
 
 __all__ = [
     "ERLCClient",
@@ -24,16 +44,26 @@ __all__ = [
     "ValidationResult",
     "ValidationStatus",
     "fingerprint_key",
+    "CommandBuilder",
+    "BuiltCommand",
+    "validate_command_syntax",
     "ERLCError",
     "APIError",
     "AuthError",
     "NetworkError",
     "NotFoundError",
     "RateLimitError",
+    "PermissionDeniedError",
+    "PlayerNotFoundError",
+    "ServerEmptyError",
+    "RobloxCommunicationError",
+    "InvalidCommandError",
+    "CircuitOpenError",
     "ModelDecodeError",
     "CommandResponse",
     "ServerInfo",
     "Player",
+    "PlayerLocation",
     "StaffMember",
     "QueueEntry",
     "JoinLogEntry",
@@ -41,6 +71,12 @@ __all__ = [
     "CommandLogEntry",
     "ModCallEntry",
     "Vehicle",
+    "VehicleColor",
+    "EmergencyCall",
     "BanEntry",
     "V2ServerBundle",
+    "ServerState",
+    "ServerTracker",
+    "V2ServerBundleValidated",
+    "decode_v2_server_bundle_validated",
 ]

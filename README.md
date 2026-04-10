@@ -1,91 +1,101 @@
 # erlc-api
 
-A modern, advanced asynchronous Python wrapper for the **ER:LC PRC Private Server API** with support for **v1** and **v2** endpoints, multi-server contexts, resilient rate-limit handling, and production-oriented error management.
+A production-ready asynchronous Python wrapper for the **ER:LC PRC Private Server API** with first-class **v1 + v2** support, multi-server contexts, typed models, resilience controls, and integration helpers.
 
-> **Release status:** this repository is currently at **v1.0.1**.
->
-> `erlc-api` is built for bot developers, dashboards, panels, automations, and backend services that need reliable access to ER:LC server data and commands.
-
----
-
-## Competitive Snapshot
-
-`erlc-api` is built to outpace thin wrappers for teams that care about reliability and delivery speed, especially in Discord bot and dashboard workloads.
-
-### High-impact differentiators
-
-- **Async-first from day one** for modern Python runtime patterns
-- **Multi-server contexts** from one shared client instance
-- **Dual response surface**: raw JSON and typed dataclass methods
-- **Safer retries** with idempotent-aware behavior
-- **Bucket-aware rate-limit handling** keyed per server key + route bucket
-- **Discord + web utility layers** to reduce repetitive integration code
-
-### Executive comparison view
-
-| Capability | `erlc-api` |
-|---|---|
-| Async architecture | Native and primary |
-| Multi-server support | First-class (`ERLCContext`) |
-| Typed + raw mode | Both, additive |
-| Production retry strategy | Built in and idempotent-aware |
-| Discord/web integration helpers | Included |
-
-See the full matrix: [comparision.md](./comparision.md)
-
-### Why teams choose this wrapper
-
-- Integrate bots faster with less boilerplate.
-- Ship safer production behavior without custom retry/limiter plumbing.
-- Keep codebases cleaner with typed models where structure matters.
-- Build website/dashboard APIs faster using DTO and metrics helpers.
-
-Explore guides in the GitHub Wiki: [erlc-api Wiki](https://github.com/Fortune1243/erlc-api/wiki)
+> Release status in this repo: **v1.0.1** + unreleased enhancements documented below.
 
 ---
 
 ## Why `erlc-api`
 
-`erlc-api` is designed for developers who do not want a thin wrapper that simply forwards requests. It provides a structured async client, isolates rate limits per server key and bucket, avoids leaking full server keys in logs, and exposes a clean error model for production use.
+`erlc-api` is designed for real bot/backend operations, not thin endpoint forwarding.
 
-### Core capabilities
-
-- **Async-first architecture** built on `httpx`
-- **ER:LC API v1 and v2 support**
-- **Multi-server workflow** through per-server contexts created from one client
-- **Bucket-aware rate-limit handling** using API headers
-- **Automatic retry handling** for safe/idempotent requests and `429` responses
-- **No automatic replay of non-idempotent command calls**
-- **Safe key fingerprinting** for logs and internal routing
-- **Structured validation flow** for checking server keys during setup
-- **Clear exception taxonomy** for auth, rate-limit, not-found, API, and network failures
-- **Remote command execution** through the PRC command endpoint
+- Async-first `httpx` client
+- Multi-server contexts from one shared client
+- Bucket-aware rate limiting with reset-aware pre-acquire
+- Configurable retries (`429` / `5xx` / network) with exponential backoff + jitter
+- Optional in-flight request coalescing for identical idempotent GET calls
+- Built-in TTL caching + manual invalidation + cache statistics
+- Optional per-bucket circuit breaker
+- Raw + typed + validated v2 response modes
+- Structured command ergonomics with dry-run and tracking
+- Log stream helpers and live server tracker
+- Expanded production error taxonomy
 
 ---
 
-## Supported API coverage
+## Installation
 
-### v1 endpoints
+```bash
+pip install -e .
+```
 
-The wrapper exposes the following v1 methods:
+Development:
 
-| Method | Purpose |
-|---|---|
-| `client.v1.command(ctx, command)` | Run a remote ER:LC command except `:log` |
-| `client.v1.server(ctx)` | Get server status/details |
-| `client.v1.players(ctx)` | Get current players |
-| `client.v1.join_logs(ctx)` | Get join logs |
-| `client.v1.queue(ctx)` | Get queue data |
-| `client.v1.kill_logs(ctx)` | Get kill logs |
-| `client.v1.command_logs(ctx)` | Get command logs |
-| `client.v1.mod_calls(ctx)` | Get moderator calls |
-| `client.v1.bans(ctx)` | Get bans |
-| `client.v1.vehicles(ctx)` | Get current vehicles |
-| `client.v1.staff(ctx)` | Get staff list |
+```bash
+pip install -e .[dev]
+```
 
-`client.v1.command(...)` intentionally rejects the `:log` command with `ValueError`. If your application needs a `:log`-driven workflow, implement that behavior outside this wrapper.
+Optional extras:
 
-Typed alternatives are available for every v1 endpoint using the same names with a `_typed` suffix:
+```bash
+pip install -e .[pydantic]       # validated v2 models
+pip install -e .[redis]          # redis cache backend
+pip install -e .[observability]  # structlog + opentelemetry-api
+pip install -e .[all]            # all optional extras
+```
+
+Requirements:
+
+- Python 3.11+
+- `httpx>=0.27.0`
+
+---
+
+## Quickstart
+
+```python
+import asyncio
+from erlc_api import ERLCClient
+
+
+async def main() -> None:
+    async with ERLCClient() as client:
+        ctx = client.ctx("your-server-key")
+
+        server = await client.v1.server(ctx)
+        bundle = await client.v2.server_default_typed(ctx)
+        validation = await client.validate_key(ctx)
+
+        print(server)
+        print(bundle.server_name)
+        print(validation.status)
+
+
+asyncio.run(main())
+```
+
+---
+
+## API Surfaces
+
+### v1 methods
+
+Raw:
+
+- `client.v1.command(ctx, command, dry_run=False)`
+- `client.v1.server(ctx)`
+- `client.v1.players(ctx)`
+- `client.v1.join_logs(ctx)`
+- `client.v1.queue(ctx)`
+- `client.v1.kill_logs(ctx)`
+- `client.v1.command_logs(ctx)`
+- `client.v1.mod_calls(ctx)`
+- `client.v1.bans(ctx)`
+- `client.v1.vehicles(ctx)`
+- `client.v1.staff(ctx)`
+
+Typed:
 
 - `client.v1.command_typed(...)`
 - `client.v1.server_typed(...)`
@@ -99,321 +109,165 @@ Typed alternatives are available for every v1 endpoint using the same names with
 - `client.v1.vehicles_typed(...)`
 - `client.v1.staff_typed(...)`
 
-### v2 endpoints
+Command ergonomics:
 
-The wrapper exposes the following v2 methods:
+- `client.v1.send_command(...)`
+- `client.v1.command_with_tracking(...)`
+- `client.v1.command_history(...)`
 
-| Method | Purpose |
-|---|---|
-| `client.v2.server(ctx, ...)` | Fetch `/v2/server` with granular include flags |
-| `client.v2.server_all(ctx)` | Fetch all supported v2 datasets in one request |
-| `client.v2.server_default(ctx)` | Fetch a practical default subset (`players`, `queue`, `staff`) |
+Log streams:
 
-Typed alternatives are also available:
+- `client.v1.command_logs_stream(...)`
+- `client.v1.join_logs_stream(...)`
+- `client.v1.kill_logs_stream(...)`
+
+### v2 methods
+
+Raw:
+
+- `client.v2.server(...)`
+- `client.v2.server_all(...)`
+- `client.v2.server_default(...)`
+
+Typed dataclass:
 
 - `client.v2.server_typed(...)`
 - `client.v2.server_all_typed(...)`
 - `client.v2.server_default_typed(...)`
 
-PRC controls access to API v2. The wrapper exposes the v2 client surface, but your server key must have PRC-granted v2 access for these requests to succeed.
+Validated (requires `pydantic` extra):
 
-### v2 include flags supported
+- `client.v2.server_validated(..., strict=False)`
+- `client.v2.server_all_validated(..., strict=False)`
+- `client.v2.server_default_validated(..., strict=False)`
 
-`client.v2.server(...)` supports these flags:
+Fluent v2 query builder:
 
-- `players`
-- `staff`
-- `join_logs`
-- `queue`
-- `kill_logs`
-- `command_logs`
-- `mod_calls`
-- `vehicles`
-
-When `players=True`, player location data is returned exactly as provided by PRC in `Players[].Location`. That includes fields such as `LocationX`, `LocationZ`, `PostalCode`, `StreetName`, and `BuildingNumber`. This wrapper currently passes that payload through as raw JSON and does not add a dedicated typed location model.
+- `client.v2.server_query(ctx)`
+- Includes: `.include_players()`, `.include_staff()`, `.include_helpers()`, `.include_join_logs()`, `.include_queue()`, `.include_kill_logs()`, `.include_command_logs()`, `.include_mod_calls()`, `.include_vehicles()`, `.include_emergency_calls()`, `.include_all()`
+- Fetch: `.fetch()`, `.fetch_typed()`, `.fetch_validated(strict=False)`
 
 ---
 
-## Typed models and adapters
+## Typed Models (Highlights)
 
-`erlc-api` now supports **dual mode** consumption:
+- `Player` includes `wanted_stars` and `location_typed: PlayerLocation | None`
+- `Vehicle` includes `color_hex`, `color_name`, `color_info: VehicleColor | None`
+- `V2ServerBundle` includes `helpers` and `emergency_calls`
+- `EmergencyCall` includes team/caller/position/started timestamp helpers
+- Unknown fields are preserved via `extra`
+- Top-level shape mismatch raises `ModelDecodeError`
 
-- keep existing raw JSON calls unchanged
-- opt into typed dataclass responses via `_typed` methods
+---
 
-Top-level typed models include:
+## Client Reliability and Operations
 
-- `ServerInfo`, `CommandResponse`
-- `Player`, `StaffMember`, `QueueEntry`, `Vehicle`, `BanEntry`
-- `JoinLogEntry`, `KillLogEntry`, `CommandLogEntry`, `ModCallEntry`
-- `V2ServerBundle`
+### `ClientConfig` capabilities
 
-Decoding behavior:
+- Retry config: `max_retries`, `retry_429`, `retry_5xx`, `retry_network`
+- Backoff config: `backoff_base_s`, `backoff_cap_s`, `backoff_jitter_s`
+- Connection pooling: `max_connections`, `max_keepalive_connections`, `keepalive_expiry_s`
+- Coalescing: `request_coalescing`
+- Cache: `cache_enabled`, `cache_backend`, `cache_ttl_by_path`
+- Circuit breaker: `circuit_breaker_enabled`, `circuit_failure_threshold`, `circuit_open_s`
+- Observability hooks: `metrics_sink`, `use_structlog`, `opentelemetry_tracing_enabled`, `debug_dump`
+- Request replay buffer: `request_replay_size`
 
-- validates only top-level payload shape (object vs list)
-- missing nested/optional fields become `None`
-- unknown fields are preserved in each model's `extra`
-- timestamp fields stay as epoch integers with datetime convenience properties
-
-If typed decoding fails on top-level shape, `ModelDecodeError` is raised.
-
-### Raw vs typed example
+### Cache controls
 
 ```python
-raw_players = await client.v1.players(ctx)              # list[dict]
-typed_players = await client.v1.players_typed(ctx)      # list[Player]
+await client.invalidate(ctx)                     # all cached endpoints for ctx
+await client.invalidate(ctx, "/v1/server")      # specific endpoint
+await client.clear_cache()                       # clear all cache entries
+print(client.cache_stats())                      # hit/miss + backend stats
 ```
 
-### Discord-focused utilities
-
-Utility modules:
-
-- `erlc_api.utils.filters`
-- `erlc_api.utils.diff`
-- `erlc_api.utils.polling`
-
-Discord adapter module:
-
-- `erlc_api.discord`
-
-Example polling loop (consumer-managed, no internal background worker):
+### Request replay (debug)
 
 ```python
-from erlc_api.discord import iter_player_events
-
-async for event in iter_player_events(client, ctx, interval_s=5.0):
-    print(type(event).__name__, event.player.name)
+for item in client.request_replay(limit=20):
+    print(item["method"], item["path"], item["status"])
 ```
 
-### Website/backend utilities
+---
 
-Web adapter module:
-
-- `erlc_api.web`
-
-Example DTO + dashboard metrics:
+## Server Tracking and Events
 
 ```python
-from erlc_api.web import compute_dashboard_metrics, v2_bundle_to_dto
+async with client.track_server(ctx, interval_s=2.0) as tracker:
+    tracker.on("player_join", lambda player: print("joined", player.name))
+    tracker.on("command_executed", lambda entry: print("cmd", entry.command))
 
-bundle = await client.v2.server_default_typed(ctx)
-dto = v2_bundle_to_dto(bundle)
-metrics = compute_dashboard_metrics(bundle)
+    await asyncio.sleep(10)
+    print("players", len(tracker.players))
 ```
 
-### Migration note
+Supported event names:
 
-This is additive only: existing raw methods remain unchanged and compatible.
+- `player_join`
+- `player_leave`
+- `staff_join`
+- `staff_leave`
+- `command_executed`
+- `snapshot`
 
 ---
 
-## Public helper objects and utilities
-
-### Main client
-
-| Object / method | Purpose |
-|---|---|
-| `ERLCClient()` | Main async client |
-| `await client.start()` | Start the HTTP client |
-| `await client.close()` | Close the HTTP client |
-| `client.ctx(server_key)` | Create a per-server `ERLCContext` |
-| `await client.validate_key(ctx)` | Validate a server key without forcing setup flows to rely on exceptions |
-
-### Context and utilities
-
-| Object / function | Purpose |
-|---|---|
-| `ERLCContext` | Carries a server key safely through requests |
-| `fingerprint_key(server_key)` | Returns a short printable fingerprint suitable for logs |
-| `helpers.validate_server_key(client, ctx)` | Backward-compatible helper for key validation |
-| `helpers.extract_log_commands(entries, ...)` | Parse fetched command log entries for `:log <payload>` commands |
-| `helpers.fetch_log_commands(client, ctx, ...)` | Fetch raw command logs once, then parse matching `:log <payload>` entries |
-
-### Validation model
-
-`validate_key()` returns a `ValidationResult` with these statuses:
-
-- `ok`
-- `auth_error`
-- `rate_limited`
-- `network_error`
-- `api_error`
-
-### `:log` helpers
-
-`client.v1.command(...)` still rejects sending `:log`, but raw command log access remains available through `client.v1.command_logs(ctx)`.
-
-If you want convenience parsing on top of fetched command logs, this package also provides optional stateless helpers:
+## Command Builder
 
 ```python
-from erlc_api.helpers import fetch_log_commands
+from erlc_api import CommandBuilder
 
-entries = await fetch_log_commands(client, ctx, payload_prefix="incident")
+cmd = CommandBuilder.pm(target="PlayerName", message="Hello")
+result = await client.v1.command_with_tracking(ctx, cmd, timeout_s=8.0)
+print(result.inferred_success, result.timed_out_waiting_for_log)
 ```
 
-These helpers:
-
-- parse `:log <payload>` entries from already-fetched command logs
-- optionally filter by `payload_prefix`
-
-These helpers do not:
-
-- poll in the background
-- deduplicate entries across calls
-- store cursors or state
-- trigger workflows automatically
-
-### Exception taxonomy
-
-| Exception | Meaning |
-|---|---|
-| `ERLCError` | Base exception |
-| `APIError` | Generic non-success API response |
-| `AuthError` | Authentication/authorization failure |
-| `RateLimitError` | Rate-limit response, with retry metadata when available |
-| `NotFoundError` | Resource not found |
-| `NetworkError` | Transport-level failure |
-| `ModelDecodeError` | Typed decode failed because top-level payload shape was unexpected |
+`client.v1.command(...)` intentionally blocks `:log` execution; use command log retrieval/helpers for `:log` workflows.
 
 ---
 
-## Installation
+## Error Taxonomy
 
-### Editable install
+Base classes:
 
-```bash
-pip install -e .
-```
+- `ERLCError`
+- `APIError`
+- `AuthError`
+- `NotFoundError`
+- `NetworkError`
+- `RateLimitError`
+- `ModelDecodeError`
 
-### Development install
+Extended classes:
 
-```bash
-pip install -e .[dev]
-```
-
-### Direct install from GitHub
-
-```bash
-pip install git+https://github.com/Fortune1243/erlc-api.git
-```
-
-### Requirements
-
-- **Python 3.11+**
-- `httpx>=0.27.0`
+- `PermissionDeniedError`
+- `PlayerNotFoundError`
+- `ServerEmptyError`
+- `RobloxCommunicationError`
+- `InvalidCommandError`
+- `CircuitOpenError`
 
 ---
 
-## Quickstart
+## Validation Helpers
 
 ```python
-import asyncio
-from erlc_api import ERLCClient
-
-
-async def main() -> None:
-    client = ERLCClient()
-    await client.start()
-
-    try:
-        ctx = client.ctx("your-server-key")
-
-        server_info = await client.v1.server(ctx)
-        default_v2 = await client.v2.server_default(ctx)
-        validation = await client.validate_key(ctx)
-
-        print(server_info)
-        print(default_v2)
-        print(validation.status)
-    finally:
-        await client.close()
-
-
-asyncio.run(main())
+result = await client.validate_key(ctx)
+if result.status != "ok":
+    print(result.status, result.retry_after)
 ```
 
----
+Aliases/utilities:
 
-## Multi-server model
-
-`erlc-api` is built so a single client can serve multiple ER:LC server keys cleanly.
-
-```python
-ctx_a = client.ctx("server-key-a")
-ctx_b = client.ctx("server-key-b")
-```
-
-This enables:
-
-- one bot serving multiple communities
-- isolated rate limiting per server key and bucket
-- cleaner guild-to-server-key mapping in Discord bots
-- safer production logging through key fingerprints instead of raw keys
+- `await client.health_check(ctx)`
+- `helpers.validate_server_key(client, ctx)`
+- `helpers.fetch_log_commands(client, ctx, payload_prefix=...)`
 
 ---
 
-## Reliability and production behavior
+## Notes
 
-`erlc-api` is built with production use in mind:
-
-- reads and tracks rate-limit bucket data from response headers
-- retries safe requests on transient failures
-- retries `429` responses with retry hints where available
-- avoids automatically replaying command requests that should not be duplicated
-- keeps request routing stable with endpoint templates
-- emits safer diagnostics without dumping full secrets into logs
-
----
-
-## Smoke testing
-
-Set your key and run the smoke script:
-
-```bash
-export ERLC_SERVER_KEY="your-server-key"
-python scripts/smoke.py
-```
-
-PowerShell:
-
-```powershell
-$env:ERLC_SERVER_KEY="your-server-key"
-python scripts/smoke.py
-```
-
----
-
-## Attribution and license
-
-This repository is published under a **custom attribution license** included in `LICENSE`.
-
-### Important credit requirement
-
-If you use this wrapper in a public bot, panel, dashboard, service, fork, package, or other distributed project, you **must** give visible credit to the original author.
-
-Minimum acceptable credit:
-
-> Powered by `erlc-api` by **Avi Sehrawat** (`avi1243` on Discord)
-
-Recommended places for attribution include:
-
-- your repository README
-- documentation or credits page
-- bot `/credits` command or equivalent
-- dashboard footer or about page
-- package/project metadata where applicable
-
----
-
-## Contact
-
-For questions, attribution issues, collaboration, or usage inquiries:
-
-- **Discord username:** `avi1243`
-- **Discord ID:** `876471383381655562`
-
----
-
-## Disclaimer
-
-This project is an independent community wrapper for the ER:LC PRC Private Server API. It is not an official PRC product.
+- Non-idempotent command requests are not auto-replayed.
+- v2 access depends on PRC allowing your key.
+- `py.typed` is included for static typing support.

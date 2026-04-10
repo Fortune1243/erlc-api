@@ -13,10 +13,22 @@ dependencies = ["httpx>=0.27.0"]
 [tool.setuptools]
 package-dir = {"" = "src"}
 
+[tool.setuptools.package-data]
+erlc_api = ["py.typed"]
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0",
   "pytest-asyncio>=0.23",
   "mypy>=1.8",
   "ruff>=0.3"
+]
+pydantic = ["pydantic>=2.6"]
+redis = ["redis>=5.0"]
+observability = ["structlog>=24.0", "opentelemetry-api>=1.25"]
+all = [
+  "pydantic>=2.6",
+  "redis>=5.0",
+  "structlog>=24.0",
+  "opentelemetry-api>=1.25",
 ]

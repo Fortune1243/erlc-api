@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- Added advanced transport resilience:
+  - configurable retry policy (`retry_429`, `retry_5xx`, `retry_network`, jitter)
+  - request coalescing for duplicate in-flight idempotent GET calls
+  - reset-aware bucket pre-acquire and per-bucket circuit breaker behavior
+- Added cache layer:
+  - in-memory TTL cache for idempotent GET endpoints
+  - optional Redis backend (`erlc-api[redis]`)
+  - `ERLCClient.invalidate(...)`, cache stats, and cache clear APIs
+- Added richer v2 typed modeling:
+  - `PlayerLocation`, `VehicleColor`, `EmergencyCall`
+  - `helpers`, `emergency_calls`, `wanted_stars`, and vehicle color fields in typed bundle parsing
+- Added optional validated v2 decoding via Pydantic v2 (`erlc-api[pydantic]`)
+  - `server_validated`, `server_all_validated`, `server_default_validated`
+- Added command ergonomics:
+  - `CommandBuilder`, syntax validation, dry-run support
+  - command history, `command_with_tracking`, and log correlation with timeout
+  - async log streaming helpers on v1 (`command_logs_stream`, `join_logs_stream`, `kill_logs_stream`)
+- Added live server state tracker (`client.track_server(ctx)`) with event callbacks for join/leave and command events.
+- Added observability hooks:
+  - metrics sink integration points
+  - optional `structlog` and OpenTelemetry tracing integration switches
+  - redacted request replay buffer for debugging
+- Added packaging/type improvements:
+  - `py.typed` marker
+  - new extras: `pydantic`, `redis`, `observability`, `all`
 - Added typed response models in `erlc_api.models` and `_typed` endpoint methods across v1 and v2.
 - Added `ModelDecodeError` for typed decode top-level shape mismatches.
 - Added utility modules:
