@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from erlc_api import ERLCClient
+from erlc_api import ERLCClient, TrackerEvent
 from erlc_api.models import CommandLogEntry, Player, StaffMember, V2ServerBundle, Vehicle
 from erlc_api.tracking import ServerTracker
 
@@ -68,3 +68,19 @@ async def test_server_tracker_emits_join_leave_and_command_events() -> None:
     assert ("leave", "Avi") in events
     assert ("join", "Bee") in events
     assert ("command", ":help") in events
+
+
+@pytest.mark.asyncio
+async def test_server_tracker_event_enum_and_string_are_both_supported() -> None:
+    api = ERLCClient()
+    ctx = api.ctx("abcd1234")
+    tracker = ServerTracker(api, ctx, interval_s=0.01)
+
+    calls: list[str] = []
+    tracker.on(TrackerEvent.PLAYER_JOIN, lambda _player: calls.append("enum"))
+    tracker.on("player_join", lambda _player: calls.append("string"))
+
+    await tracker._emit(TrackerEvent.PLAYER_JOIN, _player("Avi", 1))
+
+    assert "enum" in calls
+    assert "string" in calls

@@ -31,6 +31,8 @@ class ValidationResult:
 
 @dataclass
 class ERLCClient:
+    """Top-level async ER:LC client with v1/v2 API groups and ops helpers."""
+
     config: ClientConfig = field(default_factory=ClientConfig)
 
     def __post_init__(self) -> None:
@@ -40,13 +42,15 @@ class ERLCClient:
             circuit_open_s=self.config.circuit_open_s,
         )
         self._http = AsyncHTTP(self.config, self._limiter)
-        self.v1 = V1(self._request)
+        self.v1 = V1(self._request, command_metric_emitter=self._http.emit_command_metric)
         self.v2 = V2(self._request)
 
     async def start(self) -> None:
+        """Create and initialize the underlying HTTP client if needed."""
         await self._http.start()
 
     async def close(self) -> None:
+        """Close the underlying HTTP client and clear in-flight state."""
         await self._http.close()
 
     async def __aenter__(self) -> ERLCClient:
@@ -95,9 +99,11 @@ class ERLCClient:
         await self._http.clear_cache()
 
     def cache_stats(self) -> dict[str, Any]:
+        """Return cache hit/miss stats by endpoint plus backend-level counters."""
         return self._http.cache_stats()
 
     def request_replay(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        """Return recent redacted request records for debugging/replay analysis."""
         return self._http.recent_requests(limit=limit)
 
     def track_server(
@@ -106,6 +112,7 @@ class ERLCClient:
         *,
         interval_s: float = 2.0,
     ) -> ServerTracker:
+        """Create a live tracker that polls and emits server-state events."""
         return ServerTracker(self, ctx, interval_s=interval_s)
 
     async def _request(

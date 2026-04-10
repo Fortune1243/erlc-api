@@ -32,6 +32,16 @@ This wrapper is built for long-running bot/backend workloads.
 - `circuit_breaker_enabled`, `circuit_failure_threshold`, `circuit_open_s`
 - `debug_dump`, `request_replay_size`
 
+## Metrics hook notes
+
+When `metrics_sink` is configured:
+
+- request/rate-limit/cache metrics are emitted from HTTP transport
+- command metrics are emitted from v1 command paths:
+  - `command(...)`
+  - `send_command(...)`
+  - `command_with_tracking(...)` (single final metric per tracked call)
+
 ## Operational guidance
 
 - Use one shared `ERLCClient` per process.

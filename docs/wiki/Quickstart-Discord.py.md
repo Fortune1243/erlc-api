@@ -14,7 +14,7 @@ pip install git+https://github.com/Fortune1243/erlc-api.git
 ```python
 import discord
 from discord.ext import commands
-from erlc_api import CommandBuilder, ERLCClient
+from erlc_api import CommandBuilder, ERLCClient, TrackerEvent
 
 
 bot = commands.Bot(command_prefix="!")
@@ -71,8 +71,8 @@ import asyncio
 async def watch(channel: discord.TextChannel, server_key: str) -> None:
     erlc_ctx = api.ctx(server_key)
     async with api.track_server(erlc_ctx, interval_s=2.0) as tracker:
-        tracker.on("player_join", lambda p: channel.send(f"joined: {p.name}"))
-        tracker.on("player_leave", lambda p: channel.send(f"left: {p.name}"))
+        tracker.on(TrackerEvent.PLAYER_JOIN, lambda p: channel.send(f"joined: {p.name}"))
+        tracker.on(TrackerEvent.PLAYER_LEAVE, lambda p: channel.send(f"left: {p.name}"))
         await asyncio.sleep(3600)
 ```
 

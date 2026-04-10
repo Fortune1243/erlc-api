@@ -173,6 +173,12 @@ Fluent v2 query builder:
 - Observability hooks: `metrics_sink`, `use_structlog`, `opentelemetry_tracing_enabled`, `debug_dump`
 - Request replay buffer: `request_replay_size`
 
+Command metrics are emitted to `metrics_sink.on_command(...)` from:
+
+- `client.v1.command(...)`
+- `client.v1.send_command(...)`
+- `client.v1.command_with_tracking(...)` (single final metric; no duplicate count)
+
 ### Cache controls
 
 ```python
@@ -194,9 +200,11 @@ for item in client.request_replay(limit=20):
 ## Server Tracking and Events
 
 ```python
+from erlc_api import TrackerEvent
+
 async with client.track_server(ctx, interval_s=2.0) as tracker:
-    tracker.on("player_join", lambda player: print("joined", player.name))
-    tracker.on("command_executed", lambda entry: print("cmd", entry.command))
+    tracker.on(TrackerEvent.PLAYER_JOIN, lambda player: print("joined", player.name))
+    tracker.on("command_executed", lambda entry: print("cmd", entry.command))  # string form still supported
 
     await asyncio.sleep(10)
     print("players", len(tracker.players))
@@ -210,6 +218,15 @@ Supported event names:
 - `staff_leave`
 - `command_executed`
 - `snapshot`
+
+Typed event enum:
+
+- `TrackerEvent.PLAYER_JOIN`
+- `TrackerEvent.PLAYER_LEAVE`
+- `TrackerEvent.STAFF_JOIN`
+- `TrackerEvent.STAFF_LEAVE`
+- `TrackerEvent.COMMAND_EXECUTED`
+- `TrackerEvent.SNAPSHOT`
 
 ---
 

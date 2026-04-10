@@ -60,9 +60,11 @@ async for entry in client.v1.command_logs_stream(ctx, since_timestamp=1700000000
 ## Track server state with callbacks
 
 ```python
+from erlc_api import TrackerEvent
+
 async with client.track_server(ctx, interval_s=2.0) as tracker:
-    tracker.on("player_join", lambda p: print("joined", p.name))
-    tracker.on("command_executed", lambda c: print("cmd", c.command))
+    tracker.on(TrackerEvent.PLAYER_JOIN, lambda p: print("joined", p.name))
+    tracker.on("command_executed", lambda c: print("cmd", c.command))  # string form also supported
 ```
 
 ## Cache controls

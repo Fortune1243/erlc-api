@@ -46,7 +46,7 @@ from ._errors import (
     RobloxCommunicationError,
     ServerEmptyError,
 )
-from ._metrics import MetricsSink, NoopMetricsSink, RequestMetric
+from ._metrics import CommandMetric, MetricsSink, NoopMetricsSink, RequestMetric
 from ._ratelimit import RateLimiter
 from .context import fingerprint_key
 
@@ -329,6 +329,10 @@ class AsyncHTTP:
     def recent_requests(self, *, limit: int = 20) -> list[dict[str, Any]]:
         take = max(1, limit)
         return list(self._recent_requests)[-take:]
+
+    def emit_command_metric(self, metric: CommandMetric) -> None:
+        """Emit a command-level metric through the configured metrics sink."""
+        self._metrics.on_command(metric)
 
     @staticmethod
     def _error_for_status(*, method: str, path: str, status: int, body: Any) -> APIError:

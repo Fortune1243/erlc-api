@@ -34,13 +34,17 @@ Use `dry_run=True` with `client.v1.command(...)` / `send_command(...)`.
 
 ## How do I monitor live server state?
 
-Use `async with client.track_server(ctx) as tracker:` and register callbacks (`player_join`, `player_leave`, `staff_join`, `staff_leave`, `command_executed`, `snapshot`).
+Use `async with client.track_server(ctx) as tracker:` and register callbacks with either string names or `TrackerEvent` enum values (`PLAYER_JOIN`, `PLAYER_LEAVE`, `STAFF_JOIN`, `STAFF_LEAVE`, `COMMAND_EXECUTED`, `SNAPSHOT`).
 
 ## How do I inspect cache/replay state?
 
 - `client.cache_stats()`
 - `await client.invalidate(ctx, endpoint=None)`
 - `client.request_replay(limit=...)`
+
+## Are command metrics emitted through `metrics_sink`?
+
+Yes. `on_command(...)` metrics are emitted from `command(...)`, `send_command(...)`, and `command_with_tracking(...)`.
 
 ## How do I publish this wiki?
 

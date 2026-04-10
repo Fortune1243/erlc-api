@@ -35,7 +35,7 @@ from .models import (
     Vehicle,
     VehicleColor,
 )
-from .tracking import ServerState, ServerTracker
+from .tracking import ServerState, ServerTracker, TrackerEvent
 from .validated import V2ServerBundleValidated, decode_v2_server_bundle_validated
 
 __all__ = [
@@ -77,6 +77,7 @@ __all__ = [
     "V2ServerBundle",
     "ServerState",
     "ServerTracker",
+    "TrackerEvent",
     "V2ServerBundleValidated",
     "decode_v2_server_bundle_validated",
 ]

@@ -8,6 +8,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Mapping
 
 from .commands import BuiltCommand, infer_command_success, validate_command_syntax
 from .context import ERLCContext
+from ._metrics import CommandMetric
 from .models import (
     BanEntry,
     CommandLogEntry,
@@ -34,6 +35,11 @@ from .models import (
 )
 
 RequestFn = Callable[..., Awaitable[Any]]
+CommandMetricEmitter = Callable[[CommandMetric], None]
+
+
+def _noop_command_metric_emitter(_metric: CommandMetric) -> None:
+    return
 
 
 @dataclass(frozen=True)
@@ -56,7 +62,10 @@ class CommandExecutionResult:
 
 @dataclass
 class V1:
+    """API group for v1 endpoints, command execution helpers, and log streams."""
+
     _request: RequestFn
+    command_metric_emitter: CommandMetricEmitter = _noop_command_metric_emitter
     _command_history: list[CommandHistoryEntry] = field(default_factory=list)
 
     @staticmethod
@@ -74,12 +83,43 @@ class V1:
             raise ValueError("The :log command is not supported by this wrapper.")
 
     def command_history(self, *, limit: int | None = None) -> list[CommandHistoryEntry]:
+        """Return local command history, optionally limited to the last N entries."""
         if limit is None:
             return list(self._command_history)
         take = max(0, limit)
         return list(self._command_history[-take:])
 
-    async def command(self, ctx: ERLCContext, command: str | BuiltCommand, *, dry_run: bool = False) -> Any:
+    def _emit_command_metric(
+        self,
+        *,
+        command: str,
+        inferred_success: bool | None,
+        timed_out: bool,
+        correlated_with_log: bool,
+    ) -> None:
+        try:
+            self.command_metric_emitter(
+                CommandMetric(
+                    command=command,
+                    inferred_success=inferred_success,
+                    timed_out=timed_out,
+                    correlated_with_log=correlated_with_log,
+                )
+            )
+        except Exception:
+            # Metrics failures must never affect primary command flow.
+            return
+
+    async def _execute_command(
+        self,
+        ctx: ERLCContext,
+        command: str | BuiltCommand,
+        *,
+        dry_run: bool,
+        emit_metric: bool,
+        metric_timed_out: bool = False,
+        metric_correlated_with_log: bool = False,
+    ) -> tuple[Any, CommandResponse, bool | None]:
         command_text = self._normalize_command(command)
         validate_command_syntax(command_text)
         self._reject_log_command(command_text)
@@ -102,23 +142,38 @@ class V1:
             )
 
         decoded = decode_command_response(payload, endpoint="/v1/server/command")
+        inferred = infer_command_success(success=decoded.success, message=decoded.message)
         self._command_history.append(
             CommandHistoryEntry(
                 command=command_text,
                 sent_at_epoch=time.time(),
-                inferred_success=infer_command_success(success=decoded.success, message=decoded.message),
+                inferred_success=inferred,
                 message=decoded.message,
                 dry_run=dry_run,
             )
         )
+        if emit_metric:
+            self._emit_command_metric(
+                command=command_text,
+                inferred_success=inferred,
+                timed_out=metric_timed_out,
+                correlated_with_log=metric_correlated_with_log,
+            )
+        return payload, decoded, inferred
+
+    async def command(self, ctx: ERLCContext, command: str | BuiltCommand, *, dry_run: bool = False) -> Any:
+        """Send a v1 command (or dry-run validate it) and return raw payload."""
+        payload, _, _ = await self._execute_command(ctx, command, dry_run=dry_run, emit_metric=True)
         return payload
 
     async def send_command(self, ctx: ERLCContext, command: str | BuiltCommand, *, dry_run: bool = False) -> Any:
+        """Alias for `command(...)` to support command-builder-centric call sites."""
         if dry_run:
             return await self.command(ctx, command, dry_run=True)
         return await self.command(ctx, command)
 
     async def command_typed(self, ctx: ERLCContext, command: str | BuiltCommand, *, dry_run: bool = False) -> CommandResponse:
+        """Send a command and decode the response into `CommandResponse`."""
         if dry_run:
             payload = await self.command(ctx, command, dry_run=True)
         else:
@@ -135,6 +190,11 @@ class V1:
         timeout_s: float = 8.0,
         poll_interval_s: float = 1.0,
     ) -> CommandExecutionResult:
+        """
+        Send a command and optionally wait for matching command-log confirmation.
+
+        Emits exactly one command metric for this tracked flow (no double-counting).
+        """
         if timeout_s <= 0:
             raise ValueError("timeout_s must be greater than zero.")
         if poll_interval_s <= 0:
@@ -142,8 +202,12 @@ class V1:
 
         command_text = self._normalize_command(command)
         sent_at_epoch = time.time()
-        response = await self.command_typed(ctx, command_text, dry_run=dry_run)
-        inferred = infer_command_success(success=response.success, message=response.message)
+        _, response, inferred = await self._execute_command(
+            ctx,
+            command_text,
+            dry_run=dry_run,
+            emit_metric=False,
+        )
 
         matched: CommandLogEntry | None = None
         timed_out = False
@@ -169,6 +233,13 @@ class V1:
                 await asyncio.sleep(poll_interval_s)
             else:
                 timed_out = True
+
+        self._emit_command_metric(
+            command=command_text,
+            inferred_success=inferred,
+            timed_out=timed_out,
+            correlated_with_log=matched is not None,
+        )
 
         return CommandExecutionResult(
             command=command_text,
@@ -343,6 +414,7 @@ class V1:
         since_timestamp: int | None = None,
         poll_interval_s: float = 2.0,
     ) -> AsyncIterator[CommandLogEntry]:
+        """Yield command log entries as new records appear over repeated polling."""
         async for entry in self._stream_typed_logs(
             self.command_logs_typed,
             ctx,
@@ -359,6 +431,7 @@ class V1:
         since_timestamp: int | None = None,
         poll_interval_s: float = 2.0,
     ) -> AsyncIterator[JoinLogEntry]:
+        """Yield join log entries as new records appear over repeated polling."""
         async for entry in self._stream_typed_logs(
             self.join_logs_typed,
             ctx,
@@ -375,6 +448,7 @@ class V1:
         since_timestamp: int | None = None,
         poll_interval_s: float = 2.0,
     ) -> AsyncIterator[KillLogEntry]:
+        """Yield kill log entries as new records appear over repeated polling."""
         async for entry in self._stream_typed_logs(
             self.kill_logs_typed,
             ctx,

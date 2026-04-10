@@ -1,8 +1,8 @@
 # Quickstart (Web Backend)
 
-Use this pattern when you are building dashboards, panels, or internal APIs on top of ER:LC data.
+Use this pattern for dashboards/panels/internal APIs.
 
-## FastAPI pattern
+## FastAPI example
 
 ```python
 from contextlib import asynccontextmanager
@@ -34,18 +34,30 @@ async def snapshot(server_key: str):
         return {
             "bundle": v2_bundle_to_dto(bundle),
             "metrics": compute_dashboard_metrics(bundle).__dict__,
+            "cache": api_client.cache_stats(),
         }
     except ERLCError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 ```
 
-## Why this is better than raw forwarding
+## Optional validated mode endpoint
 
-- You get stable DTO conversion for frontend consumers.
-- Metrics helpers reduce repeated counting and grouping code.
-- Typed responses reduce silent key/shape mistakes in downstream app logic.
+```python
+@app.get("/servers/{server_key}/snapshot-validated")
+async def snapshot_validated(server_key: str):
+    ctx = api_client.ctx(server_key)
+    bundle = await api_client.v2.server_default_validated(ctx, strict=False)
+    return bundle.model_dump()
+```
 
-## Next Steps
+## Operational helpers
 
-- Expand endpoint usage in [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)
-- Choose response mode in [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
+- `api_client.invalidate(ctx, endpoint=None)` to clear stale cache entries.
+- `api_client.request_replay(limit=...)` for redacted request trace inspection.
+- `api_client.track_server(...)` if you need push-like state aggregation.
+
+## Why this helps
+
+- Stable DTOs for frontend contracts.
+- Typed/validated decoding lowers shape bugs.
+- Built-in reliability controls reduce custom middleware.

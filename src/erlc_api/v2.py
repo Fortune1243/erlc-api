@@ -18,14 +18,17 @@ class V2ServerQuery:
     _flags: dict[str, bool] = field(default_factory=dict)
 
     def include_players(self) -> V2ServerQuery:
+        """Include players in the next `/v2/server` request."""
         self._flags["players"] = True
         return self
 
     def include_staff(self) -> V2ServerQuery:
+        """Include staff in the next `/v2/server` request."""
         self._flags["staff"] = True
         return self
 
     def include_helpers(self) -> V2ServerQuery:
+        """Include helpers in the next `/v2/server` request."""
         self._flags["helpers"] = True
         return self
 
@@ -72,13 +75,16 @@ class V2ServerQuery:
         )
 
     async def fetch(self) -> Any:
+        """Execute request with the currently selected include flags (raw mode)."""
         return await self._api.server(self._ctx, **self._flags)
 
     async def fetch_typed(self) -> V2ServerBundle:
+        """Execute request and decode as typed dataclass bundle."""
         payload = await self.fetch()
         return decode_v2_server_bundle(payload, endpoint="/v2/server")
 
     async def fetch_validated(self, *, strict: bool = False) -> V2ServerBundleValidated:
+        """Execute request and validate payload with optional Pydantic strictness."""
         payload = await self.fetch()
         return decode_v2_server_bundle_validated(payload, strict=strict)
 
@@ -88,6 +94,7 @@ class V2:
     _request: RequestFn
 
     def server_query(self, ctx: ERLCContext) -> V2ServerQuery:
+        """Start a fluent include-builder for `/v2/server` requests."""
         return V2ServerQuery(_api=self, _ctx=ctx)
 
     async def server(
@@ -171,6 +178,7 @@ class V2:
         vehicles: bool = False,
         emergency_calls: bool = False,
     ) -> V2ServerBundleValidated:
+        """Fetch `/v2/server` and validate response via optional Pydantic models."""
         payload = await self.server(
             ctx,
             players=players,
@@ -206,6 +214,7 @@ class V2:
         return decode_v2_server_bundle(payload, endpoint="/v2/server")
 
     async def server_all_validated(self, ctx: ERLCContext, *, strict: bool = False) -> V2ServerBundleValidated:
+        """Fetch full `/v2/server` bundle and validate via Pydantic models."""
         payload = await self.server_all(ctx)
         return decode_v2_server_bundle_validated(payload, strict=strict)
 
@@ -217,5 +226,6 @@ class V2:
         return decode_v2_server_bundle(payload, endpoint="/v2/server")
 
     async def server_default_validated(self, ctx: ERLCContext, *, strict: bool = False) -> V2ServerBundleValidated:
+        """Fetch default `/v2/server` subset and validate via Pydantic models."""
         payload = await self.server_default(ctx)
         return decode_v2_server_bundle_validated(payload, strict=strict)

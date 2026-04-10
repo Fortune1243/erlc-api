@@ -13,7 +13,8 @@ Current implemented strengths:
 - optional per-bucket circuit breaker
 - raw + typed + validated v2 response modes
 - command dry-run/tracking + log stream helpers
-- live server tracker callbacks
+- live server tracker callbacks (string + `TrackerEvent` enum names)
+- metrics sink hooks including command-level emission
 
 ## Start Here
 
