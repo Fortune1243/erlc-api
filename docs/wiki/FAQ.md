@@ -45,7 +45,3 @@ Use `async with client.track_server(ctx) as tracker:` and register callbacks wit
 ## Are command metrics emitted through `metrics_sink`?
 
 Yes. `on_command(...)` metrics are emitted from `command(...)`, `send_command(...)`, and `command_with_tracking(...)`.
-
-## How do I publish this wiki?
-
-Use `scripts/publish_wiki.ps1` (PowerShell) or `scripts/publish_wiki.sh` (bash) to sync `docs/wiki/` into the GitHub wiki repo.
