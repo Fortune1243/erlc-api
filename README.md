@@ -49,6 +49,20 @@ The wrapper exposes the following v1 methods:
 
 `client.v1.command(...)` intentionally rejects the `:log` command with `ValueError`. If your application needs a `:log`-driven workflow, implement that behavior outside this wrapper.
 
+Typed alternatives are available for every v1 endpoint using the same names with a `_typed` suffix:
+
+- `client.v1.command_typed(...)`
+- `client.v1.server_typed(...)`
+- `client.v1.players_typed(...)`
+- `client.v1.join_logs_typed(...)`
+- `client.v1.queue_typed(...)`
+- `client.v1.kill_logs_typed(...)`
+- `client.v1.command_logs_typed(...)`
+- `client.v1.mod_calls_typed(...)`
+- `client.v1.bans_typed(...)`
+- `client.v1.vehicles_typed(...)`
+- `client.v1.staff_typed(...)`
+
 ### v2 endpoints
 
 The wrapper exposes the following v2 methods:
@@ -58,6 +72,12 @@ The wrapper exposes the following v2 methods:
 | `client.v2.server(ctx, ...)` | Fetch `/v2/server` with granular include flags |
 | `client.v2.server_all(ctx)` | Fetch all supported v2 datasets in one request |
 | `client.v2.server_default(ctx)` | Fetch a practical default subset (`players`, `queue`, `staff`) |
+
+Typed alternatives are also available:
+
+- `client.v2.server_typed(...)`
+- `client.v2.server_all_typed(...)`
+- `client.v2.server_default_typed(...)`
 
 PRC controls access to API v2. The wrapper exposes the v2 client surface, but your server key must have PRC-granted v2 access for these requests to succeed.
 
@@ -75,6 +95,79 @@ PRC controls access to API v2. The wrapper exposes the v2 client surface, but yo
 - `vehicles`
 
 When `players=True`, player location data is returned exactly as provided by PRC in `Players[].Location`. That includes fields such as `LocationX`, `LocationZ`, `PostalCode`, `StreetName`, and `BuildingNumber`. This wrapper currently passes that payload through as raw JSON and does not add a dedicated typed location model.
+
+---
+
+## Typed models and adapters
+
+`erlc-api` now supports **dual mode** consumption:
+
+- keep existing raw JSON calls unchanged
+- opt into typed dataclass responses via `_typed` methods
+
+Top-level typed models include:
+
+- `ServerInfo`, `CommandResponse`
+- `Player`, `StaffMember`, `QueueEntry`, `Vehicle`, `BanEntry`
+- `JoinLogEntry`, `KillLogEntry`, `CommandLogEntry`, `ModCallEntry`
+- `V2ServerBundle`
+
+Decoding behavior:
+
+- validates only top-level payload shape (object vs list)
+- missing nested/optional fields become `None`
+- unknown fields are preserved in each model's `extra`
+- timestamp fields stay as epoch integers with datetime convenience properties
+
+If typed decoding fails on top-level shape, `ModelDecodeError` is raised.
+
+### Raw vs typed example
+
+```python
+raw_players = await client.v1.players(ctx)              # list[dict]
+typed_players = await client.v1.players_typed(ctx)      # list[Player]
+```
+
+### Discord-focused utilities
+
+Utility modules:
+
+- `erlc_api.utils.filters`
+- `erlc_api.utils.diff`
+- `erlc_api.utils.polling`
+
+Discord adapter module:
+
+- `erlc_api.discord`
+
+Example polling loop (consumer-managed, no internal background worker):
+
+```python
+from erlc_api.discord import iter_player_events
+
+async for event in iter_player_events(client, ctx, interval_s=5.0):
+    print(type(event).__name__, event.player.name)
+```
+
+### Website/backend utilities
+
+Web adapter module:
+
+- `erlc_api.web`
+
+Example DTO + dashboard metrics:
+
+```python
+from erlc_api.web import compute_dashboard_metrics, v2_bundle_to_dto
+
+bundle = await client.v2.server_default_typed(ctx)
+dto = v2_bundle_to_dto(bundle)
+metrics = compute_dashboard_metrics(bundle)
+```
+
+### Migration note
+
+This is additive only: existing raw methods remain unchanged and compatible.
 
 ---
 
@@ -144,6 +237,7 @@ These helpers do not:
 | `RateLimitError` | Rate-limit response, with retry metadata when available |
 | `NotFoundError` | Resource not found |
 | `NetworkError` | Transport-level failure |
+| `ModelDecodeError` | Typed decode failed because top-level payload shape was unexpected |
 
 ---
 

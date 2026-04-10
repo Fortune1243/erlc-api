@@ -89,3 +89,25 @@ class RateLimitError(APIError):
     def retry_after_s(self) -> float | None:
         """Backward-compatible alias used by older callers."""
         return self.retry_after
+
+
+class ModelDecodeError(ERLCError):
+    """Raised when typed decoding fails due to top-level payload shape mismatch."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        endpoint: str,
+        expected: str,
+        payload: Any,
+    ) -> None:
+        super().__init__(
+            message,
+            method="DECODE",
+            path=endpoint,
+            status=None,
+            body=payload,
+        )
+        self.endpoint = endpoint
+        self.expected = expected

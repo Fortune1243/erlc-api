@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Added typed response models in `erlc_api.models` and `_typed` endpoint methods across v1 and v2.
+- Added `ModelDecodeError` for typed decode top-level shape mismatches.
+- Added utility modules:
+  - `erlc_api.utils.filters`
+  - `erlc_api.utils.diff`
+  - `erlc_api.utils.polling`
+- Added Discord adapters in `erlc_api.discord` for player/mod-call/command-log event iteration.
+- Added web adapters in `erlc_api.web` for DTO serialization and dashboard metrics aggregation.
+- Expanded tests for typed decoding, utilities, polling, adapters, and additive import compatibility.
+- Updated README with raw-vs-typed usage, Discord/web examples, and migration notes.
+
 ## 1.0.1 - 2026-03-05
 
 - Added `path_template` plumbing through client/http request flow for stable rate-limit bucket fallback and caching.
