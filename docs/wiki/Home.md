@@ -14,6 +14,7 @@ Current implemented strengths:
 - raw + typed + validated v2 response modes
 - command dry-run/tracking + log stream helpers
 - live server tracker callbacks (string + `TrackerEvent` enum names)
+- event webhook verification + custom command routing helpers
 - metrics sink hooks including command-level emission
 
 ## Start Here
@@ -21,6 +22,8 @@ Current implemented strengths:
 - [Getting-Started.md](./Getting-Started.md)
 - [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
 - [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md)
+- [Function-List.md](./Function-List.md)
+- [Event-Webhooks-and-Custom-Commands.md](./Event-Webhooks-and-Custom-Commands.md)
 - [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)
 - [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
 - [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

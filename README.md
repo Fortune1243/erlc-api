@@ -20,28 +20,30 @@ A production-ready asynchronous Python wrapper for the **ER:LC PRC Private Serve
 - Raw + typed + validated v2 response modes
 - Structured command ergonomics with dry-run and tracking
 - Log stream helpers and live server tracker
+- Event webhook verification + custom-command routing helpers
 - Expanded production error taxonomy
 
 ---
 
 ## Installation
 
-```bash
+```
 pip install -e .
 ```
 
 Development:
 
-```bash
+```
 pip install -e .[dev]
 ```
 
 Optional extras:
 
-```bash
+```
 pip install -e .[pydantic]       # validated v2 models
 pip install -e .[redis]          # redis cache backend
 pip install -e .[observability]  # structlog + opentelemetry-api
+pip install -e .[webhooks]       # event webhook signature verification helpers
 pip install -e .[all]            # all optional extras
 ```
 
@@ -147,6 +149,15 @@ Fluent v2 query builder:
 - Includes: `.include_players()`, `.include_staff()`, `.include_helpers()`, `.include_join_logs()`, `.include_queue()`, `.include_kill_logs()`, `.include_command_logs()`, `.include_mod_calls()`, `.include_vehicles()`, `.include_emergency_calls()`, `.include_all()`
 - Fetch: `.fetch()`, `.fetch_typed()`, `.fetch_validated(strict=False)`
 
+### Event webhook helpers
+
+- `extract_webhook_signature_headers(...)`
+- `verify_event_webhook_signature(...)`
+- `assert_valid_event_webhook_signature(...)`
+- `decode_event_webhook_payload(...)`
+- `parse_custom_command_text(...)`
+- `EventWebhookRouter(...)`
+
 ---
 
 ## Typed Models (Highlights)
@@ -241,6 +252,56 @@ print(result.inferred_success, result.timed_out_waiting_for_log)
 ```
 
 `client.v1.command(...)` intentionally blocks `:log` execution; use command log retrieval/helpers for `:log` workflows.
+
+---
+
+## Event Webhooks and Custom Commands
+
+Event webhook helpers are additive and optional. They are designed for PRC event webhook signature verification and routing `;` custom commands.
+
+```python
+from fastapi import FastAPI, HTTPException, Request
+from erlc_api import (
+    EventWebhookRouter,
+    assert_valid_event_webhook_signature,
+)
+
+app = FastAPI()
+router = EventWebhookRouter(command_prefix=";")
+
+
+@router.on_command("ping")
+def ping(command, event):
+    return {"ok": True, "command": command.command_name, "args": list(command.args)}
+
+
+@router.on_unknown
+def unknown(event):
+    return {"ok": False, "event_type": event.event_type}
+
+
+@app.post("/erlc/events")
+async def erlc_events(request: Request):
+    raw_body = await request.body()
+    try:
+        assert_valid_event_webhook_signature(
+            raw_body=raw_body,
+            headers=request.headers,
+            max_skew_s=300,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    payload = await request.json()
+    results = await router.dispatch(payload)
+    return {"handled": len(results), "results": results}
+```
+
+Important verification rules implemented here:
+
+- Signature uses `message = timestamp + raw_body` (raw bytes, not re-serialized JSON).
+- `X-Signature-Timestamp` and `X-Signature-Ed25519` are both required.
+- Default public key is PRC’s published Ed25519 SPKI key.
 
 ---
 

@@ -4,7 +4,7 @@ Use this pattern for production bot workflows with multiple guilds/servers.
 
 ## Install
 
-```bash
+```
 pip install discord.py
 pip install git+https://github.com/Fortune1243/erlc-api.git
 ```

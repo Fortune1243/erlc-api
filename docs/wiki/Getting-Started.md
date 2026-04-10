@@ -10,22 +10,23 @@ Use this page to get from zero to a reliable first integration.
 
 ## Install
 
-```bash
+```
 pip install git+https://github.com/Fortune1243/erlc-api.git
 ```
 
 Local development:
 
-```bash
+```
 pip install -e .[dev]
 ```
 
 Optional extras:
 
-```bash
+```
 pip install -e .[pydantic]       # validated v2 models
 pip install -e .[redis]          # redis cache backend
 pip install -e .[observability]  # structlog + opentelemetry-api
+pip install -e .[webhooks]       # event webhook verification helpers
 ```
 
 ## First Successful Call
@@ -69,6 +70,8 @@ await client.invalidate(ctx, "/v1/server/players")
 
 ## Next Steps
 
+- Function index: [Function-List.md](./Function-List.md)
+- Event webhooks + custom commands: [Event-Webhooks-and-Custom-Commands.md](./Event-Webhooks-and-Custom-Commands.md)
 - Bot path: [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
 - Backend path: [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md)
 - Reliability deep dive: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

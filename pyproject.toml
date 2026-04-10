@@ -26,9 +26,11 @@ dev = [
 pydantic = ["pydantic>=2.6"]
 redis = ["redis>=5.0"]
 observability = ["structlog>=24.0", "opentelemetry-api>=1.25"]
+webhooks = ["cryptography>=42.0"]
 all = [
   "pydantic>=2.6",
   "redis>=5.0",
   "structlog>=24.0",
   "opentelemetry-api>=1.25",
+  "cryptography>=42.0",
 ]

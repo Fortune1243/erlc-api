@@ -2,6 +2,8 @@
 - [Getting Started](./Getting-Started.md)
 - [Quickstart (discord.py)](./Quickstart-Discord.py.md)
 - [Quickstart (Web Backend)](./Quickstart-Web-Backend.md)
+- [Function List (Beginner-Friendly)](./Function-List.md)
+- [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
 - [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
 - [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
 - [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)

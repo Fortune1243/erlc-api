@@ -6,6 +6,10 @@ def test_import():
     assert erlc_api.ERLCError is not None
     assert erlc_api.ModelDecodeError is not None
     assert erlc_api.Player is not None
+    assert erlc_api.EventWebhookRouter is not None
+    assert erlc_api.WebhookEventType is not None
+    assert erlc_api.decode_event_webhook_payload is not None
+    assert erlc_api.verify_event_webhook_signature is not None
 
 
 def test_import_subpackages():
