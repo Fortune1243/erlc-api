@@ -54,6 +54,22 @@ def _as_int(value: Any) -> int | None:
     return None
 
 
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        text = value.strip()
+        if not text:
+            return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+    return None
+
+
 def _as_str(value: Any) -> str | None:
     if isinstance(value, str):
         text = value.strip()
@@ -65,6 +81,18 @@ def _as_mapping(value: Any) -> Mapping[str, Any] | None:
     if isinstance(value, Mapping):
         return value
     return None
+
+
+def _as_number_list(value: Any) -> list[float] | None:
+    if not isinstance(value, list):
+        return None
+    out: list[float] = []
+    for item in value:
+        number = _as_float(item)
+        if number is None:
+            continue
+        out.append(number)
+    return out
 
 
 def _extra(raw: Mapping[str, Any], consumed: set[str]) -> dict[str, Any]:
@@ -109,6 +137,17 @@ class ServerInfo:
 
 
 @dataclass(frozen=True)
+class PlayerLocation:
+    location_x: float | None
+    location_z: float | None
+    postal_code: str | None
+    street_name: str | None
+    building_number: str | None
+    raw: Mapping[str, Any] = field(default_factory=dict)
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class Player:
     name: str | None
     user_id: int | None
@@ -118,6 +157,8 @@ class Player:
     location: Mapping[str, Any] | None
     raw: Mapping[str, Any] = field(default_factory=dict)
     extra: Mapping[str, Any] = field(default_factory=dict)
+    wanted_stars: int | None = None
+    location_typed: PlayerLocation | None = None
 
 
 @dataclass(frozen=True)
@@ -196,6 +237,14 @@ class ModCallEntry:
 
 
 @dataclass(frozen=True)
+class VehicleColor:
+    color_hex: str | None
+    color_name: str | None
+    raw: Mapping[str, Any] = field(default_factory=dict)
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class Vehicle:
     owner: str | None
     model: str | None
@@ -204,6 +253,23 @@ class Vehicle:
     team: str | None
     raw: Mapping[str, Any] = field(default_factory=dict)
     extra: Mapping[str, Any] = field(default_factory=dict)
+    color_hex: str | None = None
+    color_name: str | None = None
+    color_info: VehicleColor | None = None
+
+
+@dataclass(frozen=True)
+class EmergencyCall:
+    team: str | None
+    caller: str | None
+    position: list[float] | None
+    started_at: int | None
+    raw: Mapping[str, Any] = field(default_factory=dict)
+    extra: Mapping[str, Any] = field(default_factory=dict)
+
+    @property
+    def started_at_datetime(self) -> datetime | None:
+        return _epoch_to_datetime(self.started_at)
 
 
 @dataclass(frozen=True)
@@ -240,6 +306,8 @@ class V2ServerBundle:
     max_players: int | None
     raw: Mapping[str, Any] = field(default_factory=dict)
     extra: Mapping[str, Any] = field(default_factory=dict)
+    helpers: list[StaffMember] | None = None
+    emergency_calls: list[EmergencyCall] | None = None
 
 
 def _parse_command_response_item(raw: Mapping[str, Any]) -> CommandResponse:
@@ -304,6 +372,37 @@ def _parse_server_info_item(raw: Mapping[str, Any]) -> ServerInfo:
     )
 
 
+def _parse_location_item(raw: Mapping[str, Any]) -> PlayerLocation:
+    consumed: set[str] = set()
+
+    key, x_value = _pick(raw, "LocationX", "locationX", "x")
+    if key:
+        consumed.add(key)
+    key, z_value = _pick(raw, "LocationZ", "locationZ", "z")
+    if key:
+        consumed.add(key)
+    key, postal_value = _pick(raw, "PostalCode", "postalCode", "postal_code")
+    if key:
+        consumed.add(key)
+    key, street_value = _pick(raw, "StreetName", "streetName", "street_name")
+    if key:
+        consumed.add(key)
+    key, building_value = _pick(raw, "BuildingNumber", "buildingNumber", "building_number")
+    if key:
+        consumed.add(key)
+
+    raw_dict = dict(raw)
+    return PlayerLocation(
+        location_x=_as_float(x_value),
+        location_z=_as_float(z_value),
+        postal_code=_as_str(postal_value),
+        street_name=_as_str(street_value),
+        building_number=_as_str(building_value),
+        raw=raw_dict,
+        extra=_extra(raw_dict, consumed),
+    )
+
+
 def _parse_player_item(raw: Mapping[str, Any]) -> Player:
     consumed: set[str] = set()
 
@@ -325,6 +424,12 @@ def _parse_player_item(raw: Mapping[str, Any]) -> Player:
     key, location_value = _pick(raw, "Location", "location")
     if key:
         consumed.add(key)
+    key, wanted_value = _pick(raw, "WantedStars", "wantedStars", "wanted_stars")
+    if key:
+        consumed.add(key)
+
+    location_mapping = _as_mapping(location_value)
+    location_typed = _parse_location_item(location_mapping) if location_mapping is not None else None
 
     raw_dict = dict(raw)
     return Player(
@@ -333,9 +438,11 @@ def _parse_player_item(raw: Mapping[str, Any]) -> Player:
         permission=_as_str(permission_value),
         team=_as_str(team_value),
         callsign=_as_str(callsign_value),
-        location=_as_mapping(location_value),
+        location=location_mapping,
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
+        wanted_stars=_as_int(wanted_value),
+        location_typed=location_typed,
     )
 
 
@@ -475,6 +582,24 @@ def _parse_mod_call_item(raw: Mapping[str, Any]) -> ModCallEntry:
     )
 
 
+def _parse_vehicle_color_item(raw: Mapping[str, Any]) -> VehicleColor:
+    consumed: set[str] = set()
+    key, hex_value = _pick(raw, "ColorHex", "colorHex", "color_hex", "Hex", "hex")
+    if key:
+        consumed.add(key)
+    key, name_value = _pick(raw, "ColorName", "colorName", "color_name", "Name", "name")
+    if key:
+        consumed.add(key)
+
+    raw_dict = dict(raw)
+    return VehicleColor(
+        color_hex=_as_str(hex_value),
+        color_name=_as_str(name_value),
+        raw=raw_dict,
+        extra=_extra(raw_dict, consumed),
+    )
+
+
 def _parse_vehicle_item(raw: Mapping[str, Any]) -> Vehicle:
     consumed: set[str] = set()
     key, owner_value = _pick(raw, "Owner", "owner", "Player", "player")
@@ -493,6 +618,20 @@ def _parse_vehicle_item(raw: Mapping[str, Any]) -> Vehicle:
     if key:
         consumed.add(key)
 
+    key, color_hex_value = _pick(raw, "ColorHex", "colorHex", "color_hex")
+    if key:
+        consumed.add(key)
+    key, color_name_value = _pick(raw, "ColorName", "colorName", "color_name")
+    if key:
+        consumed.add(key)
+
+    key, nested_color_value = _pick(raw, "ColorData", "ColorInfo", "ColorDetails", "colorData", "colorInfo")
+    if key:
+        consumed.add(key)
+
+    nested_color_mapping = _as_mapping(nested_color_value)
+    color_info = _parse_vehicle_color_item(nested_color_mapping) if nested_color_mapping is not None else None
+
     raw_dict = dict(raw)
     return Vehicle(
         owner=_as_str(owner_value),
@@ -500,6 +639,35 @@ def _parse_vehicle_item(raw: Mapping[str, Any]) -> Vehicle:
         color=_as_str(color_value),
         plate=_as_str(plate_value),
         team=_as_str(team_value),
+        raw=raw_dict,
+        extra=_extra(raw_dict, consumed),
+        color_hex=_as_str(color_hex_value),
+        color_name=_as_str(color_name_value),
+        color_info=color_info,
+    )
+
+
+def _parse_emergency_call_item(raw: Mapping[str, Any]) -> EmergencyCall:
+    consumed: set[str] = set()
+    key, team_value = _pick(raw, "Team", "team")
+    if key:
+        consumed.add(key)
+    key, caller_value = _pick(raw, "Caller", "caller", "Player", "player")
+    if key:
+        consumed.add(key)
+    key, position_value = _pick(raw, "Position", "position", "Positions", "positions")
+    if key:
+        consumed.add(key)
+    key, started_value = _pick(raw, "StartedAt", "startedAt", "Timestamp", "timestamp")
+    if key:
+        consumed.add(key)
+
+    raw_dict = dict(raw)
+    return EmergencyCall(
+        team=_as_str(team_value),
+        caller=_as_str(caller_value),
+        position=_as_number_list(position_value),
+        started_at=_as_int(started_value),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
@@ -607,12 +775,14 @@ def decode_v2_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> V2
 
     players_raw = _extract_list_field(raw, consumed, "Players", "players")
     staff_raw = _extract_list_field(raw, consumed, "Staff", "staff")
+    helpers_raw = _extract_list_field(raw, consumed, "Helpers", "helpers")
     join_logs_raw = _extract_list_field(raw, consumed, "JoinLogs", "join_logs", "joinLogs")
     queue_raw = _extract_list_field(raw, consumed, "Queue", "queue")
     kill_logs_raw = _extract_list_field(raw, consumed, "KillLogs", "kill_logs", "killLogs")
     command_logs_raw = _extract_list_field(raw, consumed, "CommandLogs", "command_logs", "commandLogs")
     mod_calls_raw = _extract_list_field(raw, consumed, "ModCalls", "mod_calls", "modCalls")
     vehicles_raw = _extract_list_field(raw, consumed, "Vehicles", "vehicles")
+    emergency_calls_raw = _extract_list_field(raw, consumed, "EmergencyCalls", "emergencyCalls", "emergency_calls")
 
     key, server_name_value = _pick(raw, "ServerName", "Name", "serverName", "name")
     if key:
@@ -639,6 +809,10 @@ def decode_v2_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> V2
         max_players=_as_int(max_players_value),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
+        helpers=_parse_list_items(helpers_raw, _parse_staff_item) if helpers_raw is not None else None,
+        emergency_calls=_parse_list_items(emergency_calls_raw, _parse_emergency_call_item)
+        if emergency_calls_raw is not None
+        else None,
     )
 
 
@@ -646,15 +820,18 @@ __all__ = [
     "BanEntry",
     "CommandLogEntry",
     "CommandResponse",
+    "EmergencyCall",
     "JoinLogEntry",
     "KillLogEntry",
     "ModCallEntry",
     "Player",
+    "PlayerLocation",
     "QueueEntry",
     "ServerInfo",
     "StaffMember",
     "V2ServerBundle",
     "Vehicle",
+    "VehicleColor",
     "decode_bans",
     "decode_command_logs",
     "decode_command_response",

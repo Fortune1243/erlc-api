@@ -12,6 +12,12 @@
 - Added web adapters in `erlc_api.web` for DTO serialization and dashboard metrics aggregation.
 - Expanded tests for typed decoding, utilities, polling, adapters, and additive import compatibility.
 - Updated README with raw-vs-typed usage, Discord/web examples, and migration notes.
+- Added GitHub Wiki source docs under `docs/wiki/` with Discord-first and web/backend onboarding pages.
+- Added strength-led README competitive snapshot with full matrix and wiki links.
+- Added wiki publishing scripts:
+  - `scripts/publish_wiki.ps1`
+  - `scripts/publish_wiki.sh`
+- Added manual GitHub Actions workflow `.github/workflows/publish-wiki.yml` for wiki sync via `workflow_dispatch`.
 
 ## 1.0.1 - 2026-03-05
 

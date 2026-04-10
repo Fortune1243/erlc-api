@@ -9,6 +9,7 @@ from .context import ERLCContext
 from ._errors import APIError, AuthError, NetworkError, RateLimitError
 from ._http import AsyncHTTP, ClientConfig
 from ._ratelimit import RateLimiter
+from .tracking import ServerTracker
 from .v1 import V1
 from .v2 import V2
 
@@ -33,7 +34,11 @@ class ERLCClient:
     config: ClientConfig = field(default_factory=ClientConfig)
 
     def __post_init__(self) -> None:
-        self._limiter = RateLimiter()
+        self._limiter = RateLimiter(
+            circuit_breaker_enabled=self.config.circuit_breaker_enabled,
+            circuit_failure_threshold=self.config.circuit_failure_threshold,
+            circuit_open_s=self.config.circuit_open_s,
+        )
         self._http = AsyncHTTP(self.config, self._limiter)
         self.v1 = V1(self._request)
         self.v2 = V2(self._request)
@@ -43,6 +48,13 @@ class ERLCClient:
 
     async def close(self) -> None:
         await self._http.close()
+
+    async def __aenter__(self) -> ERLCClient:
+        await self.start()
+        return self
+
+    async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
+        await self.close()
 
     def ctx(self, server_key: str) -> ERLCContext:
         # Convenience factory
@@ -69,6 +81,32 @@ class ERLCClient:
             return ValidationResult(status=ValidationStatus.NETWORK_ERROR)
         except APIError as exc:
             return ValidationResult(status=ValidationStatus.API_ERROR, api_status=exc.status)
+
+    async def health_check(self, ctx: ERLCContext) -> ValidationResult:
+        """Alias for validate_key with a production-facing name."""
+        return await self.validate_key(ctx)
+
+    async def invalidate(self, ctx: ERLCContext, endpoint: str | None = None) -> None:
+        """Invalidate in-memory/redis cache entries for a context and optional endpoint."""
+        await self._http.invalidate_cache(key_id=ctx.key_id, endpoint=endpoint)
+
+    async def clear_cache(self) -> None:
+        """Clear all cached responses."""
+        await self._http.clear_cache()
+
+    def cache_stats(self) -> dict[str, Any]:
+        return self._http.cache_stats()
+
+    def request_replay(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        return self._http.recent_requests(limit=limit)
+
+    def track_server(
+        self,
+        ctx: ERLCContext,
+        *,
+        interval_s: float = 2.0,
+    ) -> ServerTracker:
+        return ServerTracker(self, ctx, interval_s=interval_s)
 
     async def _request(
         self,

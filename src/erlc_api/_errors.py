@@ -57,8 +57,16 @@ class AuthError(APIError):
     """Authentication or authorization failure."""
 
 
+class PermissionDeniedError(AuthError):
+    """The authenticated user does not have required permissions."""
+
+
 class NotFoundError(APIError):
     """API resource was not found."""
+
+
+class PlayerNotFoundError(NotFoundError):
+    """The requested player was not found in the target server."""
 
 
 class NetworkError(ERLCError):
@@ -89,6 +97,35 @@ class RateLimitError(APIError):
     def retry_after_s(self) -> float | None:
         """Backward-compatible alias used by older callers."""
         return self.retry_after
+
+
+class CircuitOpenError(ERLCError):
+    """Request was rejected because the circuit breaker is open for this bucket."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        method: str,
+        path: str,
+        bucket: str | None = None,
+        retry_after: float | None = None,
+    ) -> None:
+        super().__init__(message, method=method, path=path, status=None, body=None)
+        self.bucket = bucket
+        self.retry_after = retry_after
+
+
+class ServerEmptyError(APIError):
+    """Server currently has no players or no data in the requested section."""
+
+
+class RobloxCommunicationError(APIError):
+    """PRC backend could not communicate with Roblox services."""
+
+
+class InvalidCommandError(APIError):
+    """Command format/syntax was rejected."""
 
 
 class ModelDecodeError(ERLCError):

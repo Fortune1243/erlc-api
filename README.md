@@ -8,6 +8,42 @@ A modern, advanced asynchronous Python wrapper for the **ER:LC PRC Private Serve
 
 ---
 
+## Competitive Snapshot
+
+`erlc-api` is built to outpace thin wrappers for teams that care about reliability and delivery speed, especially in Discord bot and dashboard workloads.
+
+### High-impact differentiators
+
+- **Async-first from day one** for modern Python runtime patterns
+- **Multi-server contexts** from one shared client instance
+- **Dual response surface**: raw JSON and typed dataclass methods
+- **Safer retries** with idempotent-aware behavior
+- **Bucket-aware rate-limit handling** keyed per server key + route bucket
+- **Discord + web utility layers** to reduce repetitive integration code
+
+### Executive comparison view
+
+| Capability | `erlc-api` |
+|---|---|
+| Async architecture | Native and primary |
+| Multi-server support | First-class (`ERLCContext`) |
+| Typed + raw mode | Both, additive |
+| Production retry strategy | Built in and idempotent-aware |
+| Discord/web integration helpers | Included |
+
+See the full matrix: [comparision.md](./comparision.md)
+
+### Why teams choose this wrapper
+
+- Integrate bots faster with less boilerplate.
+- Ship safer production behavior without custom retry/limiter plumbing.
+- Keep codebases cleaner with typed models where structure matters.
+- Build website/dashboard APIs faster using DTO and metrics helpers.
+
+Explore guides in the GitHub Wiki: [erlc-api Wiki](https://github.com/Fortune1243/erlc-api/wiki)
+
+---
+
 ## Why `erlc-api`
 
 `erlc-api` is designed for developers who do not want a thin wrapper that simply forwards requests. It provides a structured async client, isolates rate limits per server key and bucket, avoids leaking full server keys in logs, and exposes a clean error model for production use.
