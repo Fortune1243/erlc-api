@@ -327,6 +327,11 @@ Common mistakes:
 
 See [Clients and Authentication](./Clients-and-Authentication.md#low-level-request) for the low-level request signature and behavior.
 
+## Related Pages
+
+- [Earlier in the guide: Clients and Authentication](./Clients-and-Authentication.md)
+- [Next in the guide: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
+
 ---
 
-← [Clients and Authentication](./Clients-and-Authentication.md) | [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) →
+[Previous Page: Clients and Authentication](./Clients-and-Authentication.md) | [Next Page: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)

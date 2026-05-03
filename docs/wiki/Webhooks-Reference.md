@@ -299,6 +299,11 @@ async def erlc_events(request: Request):
 | `InvalidWebhookSignatureError` | Timestamp, public key, hex signature, or Ed25519 verification fails. |
 | `UnsupportedWebhookEventError` | Router cannot dispatch and `raise_on_unsupported=True`. |
 
+## Related Pages
+
+- [Earlier in the guide: Waiters and Watchers](./Waiters-and-Watchers.md)
+- [Next in the guide: Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
+
 ---
 
-← [Moderation Helpers](./Moderation-Helpers.md) | [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) →
+[Previous Page: Waiters and Watchers](./Waiters-and-Watchers.md) | [Next Page: Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)

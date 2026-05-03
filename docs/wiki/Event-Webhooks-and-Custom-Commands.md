@@ -100,6 +100,11 @@ async def erlc_event_webhook(request: Request):
 2. Add idempotency keys for repeated webhook deliveries.
 3. Log command handler outcomes to your moderation audit tables.
 
+## Related Pages
+
+- [Earlier in the guide: Webhooks Reference](./Webhooks-Reference.md)
+- [Next in the guide: Custom Commands Reference](./Custom-Commands-Reference.md)
+
 ---
 
-[Webhooks Reference](./Webhooks-Reference.md) | [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+[Previous Page: Webhooks Reference](./Webhooks-Reference.md) | [Next Page: Custom Commands Reference](./Custom-Commands-Reference.md)

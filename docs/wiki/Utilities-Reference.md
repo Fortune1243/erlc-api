@@ -484,6 +484,11 @@ Common mistakes:
 
 - Using schema diagnostics as validation for PRC permissions. It only inspects payload shape.
 
+## Related Pages
+
+- [Earlier in the guide: Function List](./Function-List.md)
+- [Next in the guide: Ops Utilities Reference](./Ops-Utilities-Reference.md)
+
 ---
 
-← [Function List](./Function-List.md) | [Waiters and Watchers](./Waiters-and-Watchers.md) →
+[Previous Page: Function List](./Function-List.md) | [Next Page: Ops Utilities Reference](./Ops-Utilities-Reference.md)

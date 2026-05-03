@@ -187,6 +187,11 @@ v2 intentionally removed public cache, Redis, metrics, request replay, tracing,
 circuit breaker, request coalescing, and retry-policy machinery. Keep those in
 your application layer if you need them.
 
+## Related Pages
+
+- [Earlier in the guide: Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
+- [Next in the guide: Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)
+
 ---
 
-← [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) | [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) →
+[Previous Page: Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) | [Next Page: Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)

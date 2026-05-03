@@ -355,6 +355,11 @@ if result.success is False:
 Common mistake: treating `success=None` as failure. Some PRC responses may only
 include a message, so `None` means unknown.
 
+## Related Pages
+
+- [Earlier in the guide: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
+- [Next in the guide: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
+
 ---
 
-← [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) | [Commands Reference](./Commands-Reference.md) →
+[Previous Page: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) | [Next Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)

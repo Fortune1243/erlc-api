@@ -1,17 +1,100 @@
 # Rate Limits, Retries, and Reliability
 
-v2.0 keeps rate-limit behavior intentionally small.
+The wrapper keeps reliability behavior intentionally small. It parses PRC
+rate-limit metadata, raises typed errors, and optionally performs one safe retry
+on `429`. It does not include cache backends, circuit breakers, tracing,
+metrics sinks, request replay, or request coalescing.
 
-- Every request sends `Server-Key`.
-- `global_key=` sends `Authorization`.
-- `429` responses raise `RateLimitError`.
-- `RateLimitError` exposes `retry_after`, `reset_epoch_s`, `bucket`, and `error_code` when available.
-- By default the wrapper sleeps once and retries once on `429`.
-- Pass `retry_429=False` to handle rate limits manually.
+## Request Headers
 
-The v1 ops stack was removed: no cache, Redis backend, metrics sink, replay buffer, tracing, circuit breaker, or request coalescing.
+Every server request sends:
 
+- `Server-Key`: the per-server API key.
+- `Authorization`: only when `global_key=` is configured.
+- `User-Agent`: wrapper version and Python runtime by default.
+
+## 429 Behavior
+
+On a `429`, the transport raises `RateLimitError`.
+
+```python
+from erlc_api import RateLimitError
+
+try:
+    await api.players()
+except RateLimitError as exc:
+    print(exc.retry_after_s, exc.reset_epoch_s, exc.bucket)
+```
+
+Useful fields:
+
+| Field | Meaning |
+| --- | --- |
+| `retry_after_s` | Seconds to wait, parsed from headers or body when available. |
+| `reset_epoch_s` | Epoch reset time parsed from rate-limit headers. |
+| `bucket` | PRC bucket name when provided. |
+| `error_code` | PRC error code when present. |
+| `body_excerpt` | Short safe body excerpt for diagnostics. |
+
+## Retry Policy
+
+Default constructor behavior:
+
+```python
+api = AsyncERLC("server-key", retry_429=True)
+```
+
+When timing information exists, the wrapper sleeps once and retries once. It
+does not perform exponential backoff or infinite retries.
+
+Disable the built-in retry when your app has its own scheduler:
+
+```python
+api = AsyncERLC("server-key", retry_429=False)
+```
+
+## Polling Guidance
+
+Use `erlc_api.limits` for conservative planning:
+
+```python
+from erlc_api.limits import poll_plan
+
+plan = poll_plan(server_count=2, endpoint_count=3, timeout_s=120)
+```
+
+This module does not claim official PRC rate limits. It only helps avoid overly
+aggressive polling in your own app.
+
+## Reliability Boundaries
+
+The wrapper handles:
+
+- decoding successful responses;
+- mapping known error codes to typed exceptions;
+- parsing rate-limit metadata;
+- closing sync and async HTTP clients.
+
+Your application should handle:
+
+- persistence and retries across process restarts;
+- user-visible degraded status;
+- queueing high-volume bot commands;
+- idempotency for webhook delivery.
+
+## Common Mistakes
+
+- Running many watchers at one-second intervals across multiple servers.
+- Treating `retry_429=True` as a full retry policy.
+- Swallowing `RateLimitError` without slowing future calls.
+- Assuming advisory `safe_interval()` values are official PRC limits.
+
+## Related Pages
+
+- [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+- [Ops Utilities Reference](./Ops-Utilities-Reference.md)
+- [Waiters and Watchers](./Waiters-and-Watchers.md)
 
 ---
 
-← [Errors and Rate Limits](./Errors-and-Rate-Limits.md) | [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md) →
+[Previous Page: Security and Secrets](./Security-and-Secrets.md) | [Next Page: Errors and Rate Limits](./Errors-and-Rate-Limits.md)

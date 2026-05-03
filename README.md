@@ -322,18 +322,34 @@ it has retry timing. Set `retry_429=False` to handle rate limits yourself.
 The README is the compact API reference. The full documentation source lives in
 `docs/wiki`:
 
+- [Home](docs/wiki/Home.md)
+- [Installation and Extras](docs/wiki/Installation-and-Extras.md)
+- [Getting Started](docs/wiki/Getting-Started.md)
+- [Quickstart: Web Backend](docs/wiki/Quickstart-Web-Backend.md)
+- [Quickstart: Discord.py](docs/wiki/Quickstart-Discord.py.md)
+- [FAQ](docs/wiki/FAQ.md)
 - [Clients and Authentication](docs/wiki/Clients-and-Authentication.md)
 - [Endpoint Reference](docs/wiki/Endpoint-Reference.md)
+- [Endpoint Usage Cookbook](docs/wiki/Endpoint-Usage-Cookbook.md)
 - [Models Reference](docs/wiki/Models-Reference.md)
+- [Typed vs Raw Responses](docs/wiki/Typed-vs-Raw-Responses.md)
 - [Commands Reference](docs/wiki/Commands-Reference.md)
+- [Function List](docs/wiki/Function-List.md)
 - [Utilities Reference](docs/wiki/Utilities-Reference.md)
-- [Custom Commands Reference](docs/wiki/Custom-Commands-Reference.md)
-- [Waiters and Watchers](docs/wiki/Waiters-and-Watchers.md)
+- [Ops Utilities Reference](docs/wiki/Ops-Utilities-Reference.md)
 - [Formatting, Analytics, and Export](docs/wiki/Formatting-Analytics-and-Export.md)
 - [Moderation Helpers](docs/wiki/Moderation-Helpers.md)
+- [Waiters and Watchers](docs/wiki/Waiters-and-Watchers.md)
 - [Webhooks Reference](docs/wiki/Webhooks-Reference.md)
+- [Event Webhooks and Custom Commands](docs/wiki/Event-Webhooks-and-Custom-Commands.md)
+- [Custom Commands Reference](docs/wiki/Custom-Commands-Reference.md)
+- [Security and Secrets](docs/wiki/Security-and-Secrets.md)
+- [Rate Limits, Retries, and Reliability](docs/wiki/Rate-Limits-Retries-and-Reliability.md)
 - [Errors and Rate Limits](docs/wiki/Errors-and-Rate-Limits.md)
+- [Error Handling and Troubleshooting](docs/wiki/Error-Handling-and-Troubleshooting.md)
+- [Testing and Mocking](docs/wiki/Testing-and-Mocking.md)
 - [Migration to v2](docs/wiki/Migration-to-v2.md)
+- [Comparison and Why erlc-api](docs/wiki/Comparison-and-Why-erlc-api.md)
 
 ## Development
 

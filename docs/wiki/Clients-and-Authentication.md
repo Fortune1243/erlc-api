@@ -246,6 +246,11 @@ result = api.health_check()
 print(result.status)
 ```
 
+## Related Pages
+
+- [Earlier in the guide: FAQ](./FAQ.md)
+- [Next in the guide: Endpoint Reference](./Endpoint-Reference.md)
+
 ---
 
-← [FAQ](./FAQ.md) | [Endpoint Reference](./Endpoint-Reference.md) →
+[Previous Page: FAQ](./FAQ.md) | [Next Page: Endpoint Reference](./Endpoint-Reference.md)

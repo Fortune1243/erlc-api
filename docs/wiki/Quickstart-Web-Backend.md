@@ -123,6 +123,11 @@ The API will be available at `http://localhost:8000`. FastAPI generates interact
 - [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) — receive in-game events pushed to your backend
 - [Waiters and Watchers](./Waiters-and-Watchers.md) — poll for changes and build live-update features
 
+## Related Pages
+
+- [Earlier in the guide: Getting Started](./Getting-Started.md)
+- [Next in the guide: Quickstart: Discord.py](./Quickstart-Discord.py.md)
+
 ---
 
-← [Quickstart: Discord.py](./Quickstart-Discord.py.md) | [Migration to v2](./Migration-to-v2.md) →
+[Previous Page: Getting Started](./Getting-Started.md) | [Next Page: Quickstart: Discord.py](./Quickstart-Discord.py.md)

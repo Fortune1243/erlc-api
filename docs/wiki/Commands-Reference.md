@@ -252,6 +252,11 @@ await moderator.warn("Player", "RDM")
 
 See [Moderation Helpers](./Moderation-Helpers.md).
 
+## Related Pages
+
+- [Earlier in the guide: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
+- [Next in the guide: Function List](./Function-List.md)
+
 ---
 
-← [Models Reference](./Models-Reference.md) | [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) →
+[Previous Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) | [Next Page: Function List](./Function-List.md)

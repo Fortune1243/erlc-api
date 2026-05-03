@@ -184,6 +184,11 @@ async def announce(ctx):
     return ctx.reply(result.message or "sent")
 ```
 
+## Related Pages
+
+- [Earlier in the guide: Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
+- [Next in the guide: Security and Secrets](./Security-and-Secrets.md)
+
 ---
 
-[Webhooks Reference](./Webhooks-Reference.md) | [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+[Previous Page: Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) | [Next Page: Security and Secrets](./Security-and-Secrets.md)

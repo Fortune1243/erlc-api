@@ -126,6 +126,11 @@ bot.run("your-discord-bot-token")
 - [Errors and Rate Limits](./Errors-and-Rate-Limits.md) — detailed error types and retry behaviour
 - [Waiters and Watchers](./Waiters-and-Watchers.md) — poll for changes and build live-update features
 
+## Related Pages
+
+- [Earlier in the guide: Quickstart: Web Backend](./Quickstart-Web-Backend.md)
+- [Next in the guide: FAQ](./FAQ.md)
+
 ---
 
-← [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md) | [Quickstart: Web Backend](./Quickstart-Web-Backend.md) →
+[Previous Page: Quickstart: Web Backend](./Quickstart-Web-Backend.md) | [Next Page: FAQ](./FAQ.md)

@@ -57,6 +57,11 @@ All methods accept `server_key=` and `raw=True`.
 
 Utilities are not imported by top-level `import erlc_api`.
 
+## Related Pages
+
+- [Earlier in the guide: Commands Reference](./Commands-Reference.md)
+- [Next in the guide: Utilities Reference](./Utilities-Reference.md)
+
 ---
 
-← [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) | [Utilities Reference](./Utilities-Reference.md) →
+[Previous Page: Commands Reference](./Commands-Reference.md) | [Next Page: Utilities Reference](./Utilities-Reference.md)

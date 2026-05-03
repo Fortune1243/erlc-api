@@ -223,6 +223,11 @@ Common mistakes:
 `erlc-api.py[scheduling]` installs `apscheduler` for apps that want to wrap watcher
 or polling calls in a scheduler. The core watcher classes do not require it.
 
+## Related Pages
+
+- [Earlier in the guide: Moderation Helpers](./Moderation-Helpers.md)
+- [Next in the guide: Webhooks Reference](./Webhooks-Reference.md)
+
 ---
 
-← [Utilities Reference](./Utilities-Reference.md) | [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md) →
+[Previous Page: Moderation Helpers](./Moderation-Helpers.md) | [Next Page: Webhooks Reference](./Webhooks-Reference.md)
