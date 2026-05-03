@@ -1,4 +1,4 @@
-# erlc-api
+# erlc-api.py
 
 Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a breaking,
 v2-first release with flat sync and async clients, typed dataclass responses by
@@ -232,6 +232,11 @@ models, errors, and `cmd`.
 | Moderation | `from erlc_api.moderation import AsyncModerator, Moderator` | Safe command composition, previews, audit messages |
 | Time | `from erlc_api.time import TimeTools` | Timestamp parsing, age strings, windows, timezone formatting |
 | Schema | `from erlc_api.schema import SchemaInspector` | Field discovery, raw/extra inspection, payload diagnostics |
+| Snapshot | `from erlc_api.snapshot import SnapshotStore` | JSONL snapshot persistence and latest-state comparisons |
+| Audit | `from erlc_api.audit import AuditLog` | JSON-safe audit events for commands, webhooks, watchers, and moderation |
+| Idempotency | `from erlc_api.idempotency import MemoryDeduper, FileDeduper` | TTL dedupe for webhook deliveries and watcher restarts |
+| Limits | `from erlc_api.limits import poll_plan, safe_interval` | Conservative polling guidance without fake PRC limit claims |
+| Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Framework-neutral router for PRC webhook messages starting with `;` |
 
 Example:
 
@@ -239,11 +244,31 @@ Example:
 from erlc_api.find import Finder
 from erlc_api.filter import Filter
 from erlc_api.export import Exporter
+from erlc_api.snapshot import SnapshotStore
 
 bundle = await api.server(all=True)
 player = Finder(bundle).player("Avi")
 police = Filter(bundle.players or []).team("Police").all()
 csv_text = Exporter(police).csv()
+SnapshotStore("snapshots.jsonl").save(bundle)
+```
+
+Custom in-game commands are received through PRC Event Webhooks. Use
+`erlc_api.webhooks` for signature verification and `erlc_api.custom_commands`
+for flexible routing:
+
+```python
+from erlc_api.custom_commands import CustomCommandRouter
+
+router = CustomCommandRouter(prefix=";")
+
+
+@router.command("ping", "p")
+async def ping(ctx):
+    return ctx.reply("pong")
+
+
+result = await router.dispatch({"Message": ";p"})
 ```
 
 ## Errors
@@ -292,9 +317,9 @@ On `429`, `RateLimitError` exposes:
 By default `retry_429=True`, so the transport sleeps once and retries once when
 it has retry timing. Set `retry_429=False` to handle rate limits yourself.
 
-## Wiki Deep Dives
+## Documentation Deep Dives
 
-The README is the compact API reference. The full GitHub Wiki source lives in
+The README is the compact API reference. The full documentation source lives in
 `docs/wiki`:
 
 - [Clients and Authentication](docs/wiki/Clients-and-Authentication.md)
@@ -302,6 +327,7 @@ The README is the compact API reference. The full GitHub Wiki source lives in
 - [Models Reference](docs/wiki/Models-Reference.md)
 - [Commands Reference](docs/wiki/Commands-Reference.md)
 - [Utilities Reference](docs/wiki/Utilities-Reference.md)
+- [Custom Commands Reference](docs/wiki/Custom-Commands-Reference.md)
 - [Waiters and Watchers](docs/wiki/Waiters-and-Watchers.md)
 - [Formatting, Analytics, and Export](docs/wiki/Formatting-Analytics-and-Export.md)
 - [Moderation Helpers](docs/wiki/Moderation-Helpers.md)

@@ -181,7 +181,7 @@ def test_optional_dependency_errors_are_helpful(monkeypatch, tmp_path) -> None:
 
     monkeypatch.setattr(builtins, "__import__", fake_import)
 
-    with pytest.raises(RuntimeError, match="erlc-api\\[export\\]"):
+    with pytest.raises(RuntimeError, match="erlc-api\\.py\\[export\\]"):
         Exporter([]).xlsx(tmp_path / "out.xlsx")
-    with pytest.raises(RuntimeError, match="erlc-api\\[rich\\]"):
+    with pytest.raises(RuntimeError, match="erlc-api\\.py\\[rich\\]"):
         Formatter().rich_table([])

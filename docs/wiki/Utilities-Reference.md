@@ -22,9 +22,135 @@ Optional dependencies are imported only when a method needs them:
 
 | Extra | Method |
 | --- | --- |
-| `erlc-api[rich]` | `Formatter().rich_table(...)` |
-| `erlc-api[export]` | `Exporter(...).xlsx(...)` |
-| `erlc-api[time]` | `TimeTools().parse(..., enhanced=True)` |
+| `erlc-api.py[rich]` | `Formatter().rich_table(...)` |
+| `erlc-api.py[export]` | `Exporter(...).xlsx(...)` |
+| `erlc-api.py[time]` | `TimeTools().parse(..., enhanced=True)` |
+
+## Ops Utilities
+
+`erlc-api.py` 2.1 adds lightweight operational helpers. They are stdlib-only,
+explicit imports, and advisory rather than a heavyweight ops stack.
+
+| Module | Import | Purpose |
+| --- | --- | --- |
+| Snapshot | `from erlc_api.snapshot import SnapshotStore` | Store typed or raw server snapshots in JSONL. |
+| Audit | `from erlc_api.audit import AuditEvent, AuditLog` | Create JSON-safe audit records from commands, webhooks, watchers, and moderation actions. |
+| Idempotency | `from erlc_api.idempotency import MemoryDeduper, FileDeduper` | TTL dedupe for webhook deliveries and watcher restarts. |
+| Limits | `from erlc_api.limits import poll_plan, safe_interval` | Conservative polling guidance without claiming official PRC limits. |
+| Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Route PRC webhook messages starting with `;` using aliases, predicates, middleware, and unknown handlers. |
+
+### SnapshotStore
+
+Signature:
+
+```python
+SnapshotStore(path: str | Path)
+```
+
+Methods:
+
+| Method | Return type | Purpose |
+| --- | --- | --- |
+| `save(bundle)` | `Snapshot` | Append a JSON-safe snapshot. |
+| `latest()` | `Snapshot | None` | Return the newest snapshot. |
+| `history(limit=None)` | `list[Snapshot]` | Return snapshots in file order, optionally latest N. |
+| `diff_latest(bundle)` | `SnapshotDiff` | Compare current data with latest saved data. |
+| `prune(max_entries=...)` | `int` | Keep latest entries and return removed count. |
+
+Example:
+
+```python
+from erlc_api.snapshot import SnapshotStore
+
+store = SnapshotStore("server-snapshots.jsonl")
+bundle = await api.server(all=True)
+
+if store.diff_latest(bundle).changed:
+    store.save(bundle)
+```
+
+Common mistake: expecting typed models back from `latest()`. Snapshots return
+JSON-safe stored data; use endpoint methods for fresh typed objects.
+
+### AuditEvent And AuditLog
+
+Signatures:
+
+```python
+AuditEvent(...)
+AuditLog(path: str | Path | None = None)
+```
+
+Helpers:
+
+| Helper | Purpose |
+| --- | --- |
+| `AuditEvent.command_result(result, command=None, actor=None, target=None)` | Build command-result audit event. |
+| `AuditEvent.webhook_event(event)` | Build webhook audit event. |
+| `AuditEvent.watcher_event(event)` | Build watcher audit event. |
+| `AuditEvent.moderation_action(action, target, ...)` | Build moderation audit event. |
+| `AuditLog.record(event)` | Store event in memory or JSONL file. |
+| `AuditLog.events(limit=None)` | Read stored events. |
+
+Example:
+
+```python
+from erlc_api.audit import AuditLog
+
+audit = AuditLog("audit.jsonl")
+result = await api.command("warn Avi RDM")
+event = audit.command_result(result, command=":warn Avi RDM", actor="Console", target="Avi")
+print(event.to_console())
+```
+
+### MemoryDeduper And FileDeduper
+
+Signatures:
+
+```python
+MemoryDeduper(ttl_s=300)
+FileDeduper(path, ttl_s=300)
+```
+
+Methods:
+
+| Method | Return type | Purpose |
+| --- | --- | --- |
+| `seen(key)` | `bool` | True when key is active. |
+| `mark(key)` | `str` | Store key and return normalized key. |
+| `check_and_mark(key)` | `bool` | True when already seen, false when newly marked. |
+| `prune()` | `int` | Remove expired keys and return removed count. |
+
+Example:
+
+```python
+from erlc_api.idempotency import FileDeduper
+
+dedupe = FileDeduper("webhook-dedupe.json", ttl_s=300)
+if dedupe.check_and_mark(event_id):
+    return {"ignored": True}
+```
+
+### PollPlan And safe_interval
+
+Signatures:
+
+```python
+safe_interval(server_count=1, endpoint_count=1, base_interval_s=2.0, min_interval_s=2.0) -> float
+poll_plan(server_count=1, endpoint_count=1, timeout_s=60.0, base_interval_s=2.0, min_interval_s=2.0) -> PollPlan
+```
+
+Purpose: provide conservative polling guidance based on request fanout. This is
+not an official PRC rate-limit implementation.
+
+Example:
+
+```python
+from erlc_api.limits import poll_plan
+
+plan = poll_plan(server_count=2, endpoint_count=3, timeout_s=120)
+watcher = AsyncWatcher(api, interval_s=plan.interval_s)
+```
 
 ## Finder
 
@@ -317,7 +443,7 @@ TimeTools().parse("last Friday 5pm", enhanced=True)
 
 Common mistakes:
 
-- Expecting enhanced natural-language parsing without installing `erlc-api[time]`.
+- Expecting enhanced natural-language parsing without installing `erlc-api.py[time]`.
 
 ## SchemaInspector
 

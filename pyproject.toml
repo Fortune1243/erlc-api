@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "erlc-api.py"
-version = "2.0.0"
+version = "2.1.0"
 description = "Lightweight sync and async Python wrapper for the ER:LC PRC API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -44,7 +44,7 @@ dependencies = ["httpx>=0.27.0"]
 Homepage = "https://github.com/Fortune1243/erlc-api"
 Repository = "https://github.com/Fortune1243/erlc-api"
 Issues = "https://github.com/Fortune1243/erlc-api/issues"
-Documentation = "https://github.com/Fortune1243/erlc-api/wiki"
+Documentation = "https://github.com/Fortune1243/erlc-api/tree/master/docs/wiki"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

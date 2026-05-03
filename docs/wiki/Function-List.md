@@ -48,6 +48,11 @@ All methods accept `server_key=` and `raw=True`.
 - `from erlc_api.moderation import AsyncModerator, Moderator`
 - `from erlc_api.time import TimeTools`
 - `from erlc_api.schema import SchemaInspector`
+- `from erlc_api.snapshot import SnapshotStore`
+- `from erlc_api.audit import AuditEvent, AuditLog`
+- `from erlc_api.idempotency import MemoryDeduper, FileDeduper`
+- `from erlc_api.limits import PollPlan, poll_plan, safe_interval`
+- `from erlc_api.custom_commands import CustomCommandRouter`
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.
 
 Utilities are not imported by top-level `import erlc_api`.

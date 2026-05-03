@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0 - 2026-05-03
+
+- Added ops utility modules: `snapshot`, `audit`, `idempotency`, and `limits`.
+- Added JSONL snapshot persistence, JSON-safe audit events, TTL dedupe helpers, and conservative polling guidance.
+- Added `custom_commands` as a framework-neutral router for PRC Event Webhook messages that start with `;`.
+- Kept new utilities lazy, stdlib-only, and outside top-level `erlc_api` exports.
+
 ## 2.0.0 - 2026-05-03
 
 Breaking lightweight release.

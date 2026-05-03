@@ -220,7 +220,7 @@ Common mistakes:
 
 ## Scheduling Extra
 
-`erlc-api[scheduling]` installs `apscheduler` for apps that want to wrap watcher
+`erlc-api.py[scheduling]` installs `apscheduler` for apps that want to wrap watcher
 or polling calls in a scheduler. The core watcher classes do not require it.
 
 ---

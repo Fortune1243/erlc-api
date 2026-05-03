@@ -8,6 +8,10 @@ This guide helps you build an endpoint that:
 
 Reference: [PRC Event Webhook docs](https://apidocs.policeroleplay.community/for-developers/v2-api-reference/event-webhook)
 
+For command-specific alias, middleware, predicate, and unknown-handler routing,
+prefer [Custom Commands Reference](./Custom-Commands-Reference.md). This page
+shows the lower-level mixed event router.
+
 ## 1. Install webhook support
 
 ```
@@ -98,4 +102,4 @@ async def erlc_event_webhook(request: Request):
 
 ---
 
-← [Webhooks Reference](./Webhooks-Reference.md) | [Errors and Rate Limits](./Errors-and-Rate-Limits.md) →
+[Webhooks Reference](./Webhooks-Reference.md) | [Errors and Rate Limits](./Errors-and-Rate-Limits.md)

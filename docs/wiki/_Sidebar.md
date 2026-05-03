@@ -25,6 +25,7 @@
 
 * [Webhooks Reference](./Webhooks-Reference.md)
 * [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
+* [Custom Commands Reference](./Custom-Commands-Reference.md)
 * [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
 * [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
 * [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)

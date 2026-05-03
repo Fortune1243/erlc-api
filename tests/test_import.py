@@ -36,6 +36,11 @@ names = [
     "erlc_api.moderation",
     "erlc_api.time",
     "erlc_api.schema",
+    "erlc_api.snapshot",
+    "erlc_api.audit",
+    "erlc_api.idempotency",
+    "erlc_api.limits",
+    "erlc_api.custom_commands",
     "erlc_api.webhooks",
 ]
 print(json.dumps([name for name in names if name in sys.modules]))

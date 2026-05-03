@@ -1,6 +1,6 @@
-# erlc-api Wiki
+# erlc-api.py Documentation
 
-`erlc-api` v2.0 is a lightweight sync and async wrapper for the ER:LC PRC API.
+`erlc-api.py` v2 is a lightweight sync and async wrapper for the ER:LC PRC API.
 It uses flat clients, typed dataclasses by default, raw JSON escape hatches,
 flexible commands, and explicit utility modules.
 
@@ -45,6 +45,7 @@ See:
 ## Operations
 
 - [Webhooks Reference](./Webhooks-Reference.md)
+- [Custom Commands Reference](./Custom-Commands-Reference.md)
 - [Quickstart: Discord.py](./Quickstart-Discord.py.md)
 - [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
 
@@ -54,4 +55,4 @@ Start with [Migration to v2](./Migration-to-v2.md) if you have older code.
 
 ---
 
-[Getting Started](./Getting-Started.md) →
+[Getting Started](./Getting-Started.md)
