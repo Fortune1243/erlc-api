@@ -3,7 +3,7 @@
 Install:
 
 ```bash
-pip install erlc-api
+pip install erlc-api.py
 ```
 
 Async:

@@ -81,7 +81,7 @@ class Exporter:
         try:
             from openpyxl import Workbook
         except Exception as exc:  # pragma: no cover - environment dependent
-            raise RuntimeError("XLSX export requires `pip install erlc-api[export]`.") from exc
+            raise RuntimeError("XLSX export requires `pip install erlc-api.py[export]`.") from exc
 
         rows = _flat_rows(self.data)
         cols = _columns(rows, columns)

@@ -5,7 +5,7 @@ Webhook helpers live in `erlc_api.webhooks`, not top-level `erlc_api`.
 Install signature verification support:
 
 ```bash
-pip install "erlc-api[webhooks]"
+pip install "erlc-api.py[webhooks]"
 ```
 
 Use explicit imports:

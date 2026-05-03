@@ -3,7 +3,7 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "erlc-api"
+name = "erlc-api.py"
 version = "2.0.0"
 description = "Lightweight sync and async Python wrapper for the ER:LC PRC API"
 readme = "README.md"

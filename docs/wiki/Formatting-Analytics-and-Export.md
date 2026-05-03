@@ -55,7 +55,7 @@ Important options:
 Optional extra:
 
 ```bash
-pip install "erlc-api[rich]"
+pip install "erlc-api.py[rich]"
 ```
 
 Required only for:
@@ -162,7 +162,7 @@ html_table = Exporter(await api.vehicles()).html(columns=["name", "owner", "plat
 Optional extra:
 
 ```bash
-pip install "erlc-api[export]"
+pip install "erlc-api.py[export]"
 ```
 
 Required only for:

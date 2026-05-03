@@ -40,7 +40,7 @@ class TimeTools:
         try:
             from dateutil import parser
         except Exception as exc:  # pragma: no cover - environment dependent
-            raise RuntimeError("Enhanced time parsing requires `pip install erlc-api[time]`.") from exc
+            raise RuntimeError("Enhanced time parsing requires `pip install erlc-api.py[time]`.") from exc
         parsed = parser.parse(text)
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)

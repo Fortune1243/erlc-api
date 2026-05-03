@@ -306,7 +306,7 @@ recent = [entry for entry in await api.command_logs() if window.contains(entry.t
 Optional extra:
 
 ```bash
-pip install "erlc-api[time]"
+pip install "erlc-api.py[time]"
 ```
 
 Required only for:

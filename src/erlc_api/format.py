@@ -85,7 +85,7 @@ class Formatter:
         try:
             from rich.table import Table
         except Exception as exc:  # pragma: no cover - environment dependent
-            raise RuntimeError("Rich formatting requires `pip install erlc-api[rich]`.") from exc
+            raise RuntimeError("Rich formatting requires `pip install erlc-api.py[rich]`.") from exc
 
         rows = [u.model_dict(item) for item in u.rows(items)]
         table = Table()

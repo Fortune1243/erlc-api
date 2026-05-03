@@ -8,7 +8,7 @@ modules that only load when you import them.
 ## Install And Extras
 
 ```bash
-pip install erlc-api
+pip install erlc-api.py
 ```
 
 Development install:
@@ -32,7 +32,7 @@ Optional extras:
 Example:
 
 ```bash
-pip install "erlc-api[webhooks,export]"
+pip install "erlc-api.py[webhooks,export]"
 ```
 
 ## Quickstart

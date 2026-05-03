@@ -114,7 +114,7 @@ def _load_public_key(public_key_b64: str) -> Any:
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
     except Exception as exc:  # pragma: no cover - optional dependency
         raise RuntimeError(
-            "Event webhook signature verification requires `cryptography`. Install with `pip install erlc-api[webhooks]`."
+            "Event webhook signature verification requires `cryptography`. Install with `pip install erlc-api.py[webhooks]`."
         ) from exc
 
     try:

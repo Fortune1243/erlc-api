@@ -18,13 +18,13 @@ rigid command helpers. v2 focuses on:
 ## Install
 
 ```bash
-pip install --upgrade erlc-api
+pip install --upgrade erlc-api.py
 ```
 
 Optional features are extras:
 
 ```bash
-pip install "erlc-api[webhooks,utils]"
+pip install "erlc-api.py[webhooks,utils]"
 ```
 
 ## Import Changes
