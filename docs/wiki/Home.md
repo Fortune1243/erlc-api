@@ -51,3 +51,7 @@ See:
 ## Migration
 
 Start with [Migration to v2](./Migration-to-v2.md) if you have older code.
+
+---
+
+[Getting Started](./Getting-Started.md) →

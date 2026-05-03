@@ -251,3 +251,7 @@ await moderator.warn("Player", "RDM")
 ```
 
 See [Moderation Helpers](./Moderation-Helpers.md).
+
+---
+
+← [Models Reference](./Models-Reference.md) | [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) →

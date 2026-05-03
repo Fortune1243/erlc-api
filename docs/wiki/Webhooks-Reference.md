@@ -295,3 +295,7 @@ async def erlc_events(request: Request):
 | `MissingWebhookHeaderError` | Required signature header is missing. |
 | `InvalidWebhookSignatureError` | Timestamp, public key, hex signature, or Ed25519 verification fails. |
 | `UnsupportedWebhookEventError` | Router cannot dispatch and `raise_on_unsupported=True`. |
+
+---
+
+← [Moderation Helpers](./Moderation-Helpers.md) | [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) →

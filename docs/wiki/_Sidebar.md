@@ -8,9 +8,11 @@
 
 * [Clients and Authentication](./Clients-and-Authentication.md)
 * [Endpoint Reference](./Endpoint-Reference.md)
+* [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
 * [Models Reference](./Models-Reference.md)
 * [Commands Reference](./Commands-Reference.md)
 * [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
+* [Function List](./Function-List.md)
 
 ## Utilities
 
@@ -22,7 +24,13 @@
 ## Operations
 
 * [Webhooks Reference](./Webhooks-Reference.md)
+* [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
 * [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+* [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
+* [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)
+
+## Quickstarts
+
 * [Quickstart: Discord.py](./Quickstart-Discord.py.md)
 * [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
 

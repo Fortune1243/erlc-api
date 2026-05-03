@@ -326,3 +326,7 @@ Common mistakes:
 ## `request`
 
 See [Clients and Authentication](./Clients-and-Authentication.md#low-level-request) for the low-level request signature and behavior.
+
+---
+
+← [Clients and Authentication](./Clients-and-Authentication.md) | [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) →

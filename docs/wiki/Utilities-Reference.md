@@ -357,3 +357,7 @@ print(SchemaInspector(player).diagnostics("name", "user_id", "team"))
 Common mistakes:
 
 - Using schema diagnostics as validation for PRC permissions. It only inspects payload shape.
+
+---
+
+← [Function List](./Function-List.md) | [Waiters and Watchers](./Waiters-and-Watchers.md) →

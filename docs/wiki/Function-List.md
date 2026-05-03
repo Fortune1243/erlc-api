@@ -51,3 +51,7 @@ All methods accept `server_key=` and `raw=True`.
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.
 
 Utilities are not imported by top-level `import erlc_api`.
+
+---
+
+← [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) | [Utilities Reference](./Utilities-Reference.md) →

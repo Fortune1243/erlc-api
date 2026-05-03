@@ -354,3 +354,7 @@ if result.success is False:
 
 Common mistake: treating `success=None` as failure. Some PRC responses may only
 include a message, so `None` means unknown.
+
+---
+
+← [Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) | [Commands Reference](./Commands-Reference.md) →

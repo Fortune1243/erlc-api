@@ -23,3 +23,7 @@ No. v2.0 only performs minimal command syntax validation.
 ## Where did cache, metrics, replay, and Redis go?
 
 They were removed to keep the wrapper lightweight.
+
+---
+
+← [Getting Started](./Getting-Started.md) | [Clients and Authentication](./Clients-and-Authentication.md) →

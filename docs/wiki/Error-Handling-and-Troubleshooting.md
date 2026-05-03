@@ -25,3 +25,7 @@ Common exceptions:
 - `ModuleOutdatedError`
 - `ModelDecodeError`
 
+
+---
+
+← [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) | [Quickstart: Discord.py](./Quickstart-Discord.py.md) →

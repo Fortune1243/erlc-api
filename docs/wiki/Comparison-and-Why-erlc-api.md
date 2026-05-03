@@ -1,4 +1,4 @@
-# Comparison and Why erlc-api
+﻿# Comparison and Why erlc-api
 
 `erlc-api` v2.0 focuses on the smallest useful wrapper surface:
 
@@ -12,3 +12,7 @@
 
 The package intentionally avoids heavyweight runtime features such as cache backends, metrics sinks, tracing, request replay, and circuit breakers.
 
+
+---
+
+← [Migration to v2](./Migration-to-v2.md)

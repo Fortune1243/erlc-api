@@ -226,3 +226,7 @@ Use raw only when you need exact JSON:
 ```python
 payload = await api.players(raw=True)
 ```
+
+---
+
+← [Quickstart: Web Backend](./Quickstart-Web-Backend.md) | [Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md) →

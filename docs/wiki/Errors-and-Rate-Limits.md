@@ -186,3 +186,7 @@ checks and setup flows; normal endpoint calls should use exceptions.
 v2 intentionally removed public cache, Redis, metrics, request replay, tracing,
 circuit breaker, request coalescing, and retry-policy machinery. Keep those in
 your application layer if you need them.
+
+---
+
+← [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) | [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) →

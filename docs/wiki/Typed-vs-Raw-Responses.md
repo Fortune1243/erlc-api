@@ -16,3 +16,7 @@ print(payload[0]["Player"])
 
 Typed models preserve unknown fields through `.extra` and include `.raw` plus `.to_dict()`.
 
+
+---
+
+← [Commands Reference](./Commands-Reference.md) | [Function List](./Function-List.md) →

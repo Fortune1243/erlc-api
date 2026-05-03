@@ -245,3 +245,7 @@ Sync:
 result = api.health_check()
 print(result.status)
 ```
+
+---
+
+← [FAQ](./FAQ.md) | [Endpoint Reference](./Endpoint-Reference.md) →

@@ -11,3 +11,7 @@ v2.0 keeps rate-limit behavior intentionally small.
 
 The v1 ops stack was removed: no cache, Redis backend, metrics sink, replay buffer, tracing, circuit breaker, or request coalescing.
 
+
+---
+
+← [Errors and Rate Limits](./Errors-and-Rate-Limits.md) | [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md) →

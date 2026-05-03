@@ -95,3 +95,7 @@ async def erlc_event_webhook(request: Request):
 1. Add role/permission checks before executing command handlers.
 2. Add idempotency keys for repeated webhook deliveries.
 3. Log command handler outcomes to your moderation audit tables.
+
+---
+
+← [Webhooks Reference](./Webhooks-Reference.md) | [Errors and Rate Limits](./Errors-and-Rate-Limits.md) →

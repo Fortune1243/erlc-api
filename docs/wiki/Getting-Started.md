@@ -33,3 +33,7 @@ await api.players(server_key="other-key")
 
 Use `global_key=` when the PRC large-app flow gives your app an Authorization key.
 
+
+---
+
+← [Home](./Home.md) | [FAQ](./FAQ.md) →

@@ -43,3 +43,7 @@ bundle = await api.server(all=True)
 player = Finder(bundle).player("Avi")
 summary = Analyzer(bundle).dashboard()
 ```
+
+---
+
+← [Endpoint Reference](./Endpoint-Reference.md) | [Models Reference](./Models-Reference.md) →

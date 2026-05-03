@@ -151,3 +151,7 @@ async def warn_if_online(api, target: str, reason: str):
 ```
 
 This pattern keeps lookups explicit and leaves the command execution path simple.
+
+---
+
+← [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md) | [Webhooks Reference](./Webhooks-Reference.md) →
