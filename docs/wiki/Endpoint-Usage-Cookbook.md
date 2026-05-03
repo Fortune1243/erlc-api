@@ -1,92 +1,45 @@
 # Endpoint Usage Cookbook
 
-High-value endpoint patterns you can use directly.
-
-## v2 selective fetch with fluent builder
+Fetch the common dashboard view:
 
 ```python
-bundle = await (
-    client.v2.server_query(ctx)
-    .include_players()
-    .include_staff()
-    .include_helpers()
-    .include_vehicles()
-    .fetch_typed()
-)
+bundle = await api.server(players=True, queue=True, staff=True)
 ```
 
-## v2 validated fetch (pydantic)
+Fetch everything supported by `GET /v2/server`:
 
 ```python
-bundle = await client.v2.server_validated(
-    ctx,
-    players=True,
-    queue=True,
-    strict=False,
-)
+bundle = await api.server(all=True)
 ```
 
-## Command builder + tracking
+Send a command:
 
 ```python
-from erlc_api import CommandBuilder
+from erlc_api import cmd
 
-result = await client.v1.command_with_tracking(
-    ctx,
-    CommandBuilder.pm(target="PlayerName", message="Hello"),
-    timeout_s=8.0,
-)
-print(result.inferred_success, result.timed_out_waiting_for_log)
+await api.command("h hello")
+await api.command(cmd.pm("Player", "hello"))
 ```
 
-## Dry-run command validation
+Fetch raw JSON:
 
 ```python
-preview = await client.v1.command(
-    ctx,
-    CommandBuilder.warn(target="PlayerName", reason="Follow rules"),
-    dry_run=True,
-)
-print(preview)
+payload = await api.server(all=True, raw=True)
 ```
 
-## Stream logs as they arrive
+Use the low-level request method for a newly added API endpoint:
 
 ```python
-async for entry in client.v1.command_logs_stream(ctx, since_timestamp=1700000000):
-    print(entry.timestamp, entry.player, entry.command)
+payload = await api.request("GET", "/v2/server", params={"Players": "true"})
 ```
 
-## Track server state with callbacks
+Use utility tool objects only when needed:
 
 ```python
-from erlc_api import TrackerEvent
+from erlc_api.find import Finder
+from erlc_api.analytics import Analyzer
 
-async with client.track_server(ctx, interval_s=2.0) as tracker:
-    tracker.on(TrackerEvent.PLAYER_JOIN, lambda p: print("joined", p.name))
-    tracker.on("command_executed", lambda c: print("cmd", c.command))  # string form also supported
+bundle = await api.server(all=True)
+player = Finder(bundle).player("Avi")
+summary = Analyzer(bundle).dashboard()
 ```
-
-## Cache controls
-
-```python
-stats = client.cache_stats()
-await client.invalidate(ctx, "/v1/server/players")
-```
-
-## Parse `:log` payloads from command logs
-
-```python
-from erlc_api.helpers import fetch_log_commands
-
-entries = await fetch_log_commands(client, ctx, payload_prefix="incident")
-for item in entries:
-    print(item.player, item.payload)
-```
-
-Note: `client.v1.command(...)` intentionally blocks `:log` execution.
-
-## Next Steps
-
-- Response mode selection: [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
-- Reliability internals: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

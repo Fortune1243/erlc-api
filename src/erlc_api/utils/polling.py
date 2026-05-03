@@ -6,9 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import AsyncIterator, Generic, TypeVar
 
-from ..client import ERLCClient
-from ..context import ERLCContext
-from ..models import Player, QueueEntry, V2ServerBundle
+from ..client import AsyncERLC
+from ..models import Player, ServerBundle
 from .diff import PlayerDiff, QueueDiff, ServerDefaultDiff, diff_players, diff_queue, diff_server_default
 
 CurrentT = TypeVar("CurrentT")
@@ -33,16 +32,15 @@ def _validate_interval(interval_s: float) -> None:
 
 
 async def poll_players(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
 ) -> AsyncIterator[PollSnapshot[list[Player], PlayerDiff]]:
     _validate_interval(interval_s)
     previous: list[Player] | None = None
-
     while True:
-        current = await client.v1.players_typed(ctx)
+        current = await client.players(server_key=server_key)
         snapshot = PollSnapshot(
             current=current,
             previous=previous,
@@ -55,16 +53,15 @@ async def poll_players(
 
 
 async def poll_queue(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
-) -> AsyncIterator[PollSnapshot[list[QueueEntry], QueueDiff]]:
+) -> AsyncIterator[PollSnapshot[list[int], QueueDiff]]:
     _validate_interval(interval_s)
-    previous: list[QueueEntry] | None = None
-
+    previous: list[int] | None = None
     while True:
-        current = await client.v1.queue_typed(ctx)
+        current = await client.queue(server_key=server_key)
         snapshot = PollSnapshot(
             current=current,
             previous=previous,
@@ -77,16 +74,15 @@ async def poll_queue(
 
 
 async def poll_server_default(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
-) -> AsyncIterator[PollSnapshot[V2ServerBundle, ServerDefaultDiff]]:
+) -> AsyncIterator[PollSnapshot[ServerBundle, ServerDefaultDiff]]:
     _validate_interval(interval_s)
-    previous: V2ServerBundle | None = None
-
+    previous: ServerBundle | None = None
     while True:
-        current = await client.v2.server_default_typed(ctx)
+        current = await client.server(server_key=server_key, players=True, queue=True, staff=True)
         snapshot = PollSnapshot(
             current=current,
             previous=previous,

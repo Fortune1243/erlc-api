@@ -1,17 +1,36 @@
-# src/erlc_api/client.py
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any, Mapping, Optional
+from typing import Any, Iterable, Mapping
 
-from .context import ERLCContext
 from ._errors import APIError, AuthError, NetworkError, RateLimitError
-from ._http import AsyncHTTP, ClientConfig
-from ._ratelimit import RateLimiter
-from .tracking import ServerTracker
-from .v1 import V1
-from .v2 import V2
+from ._http import AsyncTransport, ClientSettings, SyncTransport
+from .commands import Command, normalize_command
+from .models import (
+    BanList,
+    CommandResult,
+    EmergencyCall,
+    JoinLogEntry,
+    KillLogEntry,
+    ModCallEntry,
+    Player,
+    ServerBundle,
+    StaffList,
+    Vehicle,
+    decode_bans,
+    decode_command_logs,
+    decode_command_result,
+    decode_emergency_calls,
+    decode_join_logs,
+    decode_kill_logs,
+    decode_mod_calls,
+    decode_players,
+    decode_queue,
+    decode_server_bundle,
+    decode_staff,
+    decode_vehicles,
+)
 
 
 class ValidationStatus(StrEnum):
@@ -29,53 +48,231 @@ class ValidationResult:
     api_status: int | None = None
 
 
-@dataclass
-class ERLCClient:
-    """Top-level async ER:LC client with v1/v2 API groups and ops helpers."""
+_V2_INCLUDE_PARAMS = {
+    "players": "Players",
+    "staff": "Staff",
+    "join_logs": "JoinLogs",
+    "queue": "Queue",
+    "kill_logs": "KillLogs",
+    "command_logs": "CommandLogs",
+    "mod_calls": "ModCalls",
+    "emergency_calls": "EmergencyCalls",
+    "vehicles": "Vehicles",
+}
 
-    config: ClientConfig = field(default_factory=ClientConfig)
 
-    def __post_init__(self) -> None:
-        self._limiter = RateLimiter(
-            circuit_breaker_enabled=self.config.circuit_breaker_enabled,
-            circuit_failure_threshold=self.config.circuit_failure_threshold,
-            circuit_open_s=self.config.circuit_open_s,
-        )
-        self._http = AsyncHTTP(self.config, self._limiter)
-        self.v1 = V1(self._request, command_metric_emitter=self._http.emit_command_metric)
-        self.v2 = V2(self._request)
+def _settings(
+    *,
+    base_url: str,
+    timeout_s: float,
+    retry_429: bool,
+    user_agent: str | None,
+) -> ClientSettings:
+    settings = ClientSettings(base_url=base_url, timeout_s=timeout_s, retry_429=retry_429)
+    if user_agent is not None:
+        settings.user_agent = user_agent
+    return settings
+
+
+def _default_key(default: str | None, override: str | None) -> str:
+    key = (override if override is not None else default) or ""
+    key = key.strip()
+    if not key:
+        raise ValueError("A server key is required. Pass it to the client or as server_key=...")
+    return key
+
+
+def _include_params(
+    *,
+    include: Iterable[str] | str | None,
+    all: bool,
+    players: bool,
+    staff: bool,
+    join_logs: bool,
+    queue: bool,
+    kill_logs: bool,
+    command_logs: bool,
+    mod_calls: bool,
+    emergency_calls: bool,
+    vehicles: bool,
+) -> dict[str, str]:
+    selected = {
+        "players": players,
+        "staff": staff,
+        "join_logs": join_logs,
+        "queue": queue,
+        "kill_logs": kill_logs,
+        "command_logs": command_logs,
+        "mod_calls": mod_calls,
+        "emergency_calls": emergency_calls,
+        "vehicles": vehicles,
+    }
+    if all:
+        selected = {key: True for key in selected}
+    if include is not None:
+        names = [include] if isinstance(include, str) else list(include)
+        for name in names:
+            key = name.strip().lower().replace("-", "_")
+            if key == "all":
+                selected = {item: True for item in selected}
+                continue
+            if key not in selected:
+                raise ValueError(f"Unknown v2 include: {name}")
+            selected[key] = True
+    return {param: "true" for key, param in _V2_INCLUDE_PARAMS.items() if selected[key]}
+
+
+class AsyncERLC:
+    """Async, flat, v2-first PRC API wrapper."""
+
+    def __init__(
+        self,
+        server_key: str | None = None,
+        *,
+        global_key: str | None = None,
+        base_url: str = "https://api.policeroleplay.community",
+        timeout_s: float = 20.0,
+        retry_429: bool = True,
+        user_agent: str | None = None,
+        transport: AsyncTransport | None = None,
+    ) -> None:
+        self.server_key = server_key.strip() if isinstance(server_key, str) else server_key
+        self.global_key = global_key.strip() if isinstance(global_key, str) else global_key
+        self.settings = _settings(base_url=base_url, timeout_s=timeout_s, retry_429=retry_429, user_agent=user_agent)
+        self._transport = transport or AsyncTransport(self.settings, global_key=self.global_key)
 
     async def start(self) -> None:
-        """Create and initialize the underlying HTTP client if needed."""
-        await self._http.start()
+        await self._transport.start()
 
     async def close(self) -> None:
-        """Close the underlying HTTP client and clear in-flight state."""
-        await self._http.close()
+        await self._transport.close()
 
-    async def __aenter__(self) -> ERLCClient:
+    async def __aenter__(self) -> AsyncERLC:
         await self.start()
         return self
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
         await self.close()
 
-    def ctx(self, server_key: str) -> ERLCContext:
-        # Convenience factory
-        return ERLCContext(server_key=server_key.strip())
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        server_key: str | None = None,
+        params: Mapping[str, Any] | None = None,
+        json: Any = None,
+        headers: Mapping[str, str] | None = None,
+    ) -> Any:
+        return await self._transport.request(
+            server_key=_default_key(self.server_key, server_key),
+            method=method,
+            path=path,
+            params=params,
+            json=json,
+            headers=headers,
+        )
 
-    async def validate_key(self, ctx: ERLCContext) -> ValidationResult:
-        """
-        Validate a server key using a lightweight authenticated endpoint.
+    async def server(
+        self,
+        *,
+        server_key: str | None = None,
+        raw: bool = False,
+        include: Iterable[str] | str | None = None,
+        all: bool = False,
+        players: bool = False,
+        staff: bool = False,
+        join_logs: bool = False,
+        queue: bool = False,
+        kill_logs: bool = False,
+        command_logs: bool = False,
+        mod_calls: bool = False,
+        emergency_calls: bool = False,
+        vehicles: bool = False,
+    ) -> Any | ServerBundle:
+        payload = await self.request(
+            "GET",
+            "/v2/server",
+            server_key=server_key,
+            params=_include_params(
+                include=include,
+                all=all,
+                players=players,
+                staff=staff,
+                join_logs=join_logs,
+                queue=queue,
+                kill_logs=kill_logs,
+                command_logs=command_logs,
+                mod_calls=mod_calls,
+                emergency_calls=emergency_calls,
+                vehicles=vehicles,
+            ),
+        )
+        return payload if raw else decode_server_bundle(payload)
 
-        Expected API failures are returned as structured statuses so setup flows
-        can branch without exception handling.
-        """
-        if not ctx.server_key.strip():
-            raise ValueError("Context must include a non-empty server key.")
+    async def players(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Player]:
+        payload = await self.server(server_key=server_key, raw=True, players=True)
+        return payload["Players"] if raw else decode_players(payload.get("Players", []))
 
+    async def staff(self, *, server_key: str | None = None, raw: bool = False) -> Any | StaffList:
+        payload = await self.server(server_key=server_key, raw=True, staff=True)
+        return payload["Staff"] if raw else decode_staff(payload.get("Staff", {}))
+
+    async def queue(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[int]:
+        payload = await self.server(server_key=server_key, raw=True, queue=True)
+        return payload["Queue"] if raw else decode_queue(payload.get("Queue", []))
+
+    async def join_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[JoinLogEntry]:
+        payload = await self.server(server_key=server_key, raw=True, join_logs=True)
+        return payload["JoinLogs"] if raw else decode_join_logs(payload.get("JoinLogs", []))
+
+    async def kill_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[KillLogEntry]:
+        payload = await self.server(server_key=server_key, raw=True, kill_logs=True)
+        return payload["KillLogs"] if raw else decode_kill_logs(payload.get("KillLogs", []))
+
+    async def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Any]:
+        payload = await self.server(server_key=server_key, raw=True, command_logs=True)
+        return payload["CommandLogs"] if raw else decode_command_logs(payload.get("CommandLogs", []))
+
+    async def mod_calls(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[ModCallEntry]:
+        payload = await self.server(server_key=server_key, raw=True, mod_calls=True)
+        return payload["ModCalls"] if raw else decode_mod_calls(payload.get("ModCalls", []))
+
+    async def emergency_calls(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[EmergencyCall]:
+        payload = await self.server(server_key=server_key, raw=True, emergency_calls=True)
+        return payload["EmergencyCalls"] if raw else decode_emergency_calls(payload.get("EmergencyCalls", []))
+
+    async def vehicles(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Vehicle]:
+        payload = await self.server(server_key=server_key, raw=True, vehicles=True)
+        return payload["Vehicles"] if raw else decode_vehicles(payload.get("Vehicles", []))
+
+    async def bans(self, *, server_key: str | None = None, raw: bool = False) -> Any | BanList:
+        payload = await self.request("GET", "/v1/server/bans", server_key=server_key)
+        return payload if raw else decode_bans(payload)
+
+    async def command(
+        self,
+        command: str | Command,
+        *,
+        server_key: str | None = None,
+        raw: bool = False,
+        dry_run: bool = False,
+    ) -> Any | CommandResult:
+        command_text = normalize_command(command)
+        if dry_run:
+            payload = {"message": "Dry-run validation passed. Command not sent.", "success": True, "command": command_text}
+            return payload if raw else decode_command_result(payload)
+        payload = await self.request(
+            "POST",
+            "/v2/server/command",
+            server_key=server_key,
+            json={"command": command_text},
+        )
+        return payload if raw else decode_command_result(payload)
+
+    async def validate_key(self, *, server_key: str | None = None) -> ValidationResult:
         try:
-            await self.v1.server(ctx)
+            await self.server(server_key=server_key, raw=True)
             return ValidationResult(status=ValidationStatus.OK)
         except AuthError:
             return ValidationResult(status=ValidationStatus.AUTH_ERROR)
@@ -86,62 +283,178 @@ class ERLCClient:
         except APIError as exc:
             return ValidationResult(status=ValidationStatus.API_ERROR, api_status=exc.status)
 
-    async def health_check(self, ctx: ERLCContext) -> ValidationResult:
-        """Alias for validate_key with a production-facing name."""
-        return await self.validate_key(ctx)
+    async def health_check(self, *, server_key: str | None = None) -> ValidationResult:
+        return await self.validate_key(server_key=server_key)
 
-    async def invalidate(self, ctx: ERLCContext, endpoint: str | None = None) -> None:
-        """Invalidate in-memory/redis cache entries for a context and optional endpoint."""
-        await self._http.invalidate_cache(key_id=ctx.key_id, endpoint=endpoint)
 
-    async def clear_cache(self) -> None:
-        """Clear all cached responses."""
-        await self._http.clear_cache()
+class ERLC:
+    """Sync, flat, v2-first PRC API wrapper for scripts."""
 
-    def cache_stats(self) -> dict[str, Any]:
-        """Return cache hit/miss stats by endpoint plus backend-level counters."""
-        return self._http.cache_stats()
-
-    def request_replay(self, *, limit: int = 20) -> list[dict[str, Any]]:
-        """Return recent redacted request records for debugging/replay analysis."""
-        return self._http.recent_requests(limit=limit)
-
-    def track_server(
+    def __init__(
         self,
-        ctx: ERLCContext,
+        server_key: str | None = None,
         *,
-        interval_s: float = 2.0,
-    ) -> ServerTracker:
-        """Create a live tracker that polls and emits server-state events."""
-        return ServerTracker(self, ctx, interval_s=interval_s)
+        global_key: str | None = None,
+        base_url: str = "https://api.policeroleplay.community",
+        timeout_s: float = 20.0,
+        retry_429: bool = True,
+        user_agent: str | None = None,
+        transport: SyncTransport | None = None,
+    ) -> None:
+        self.server_key = server_key.strip() if isinstance(server_key, str) else server_key
+        self.global_key = global_key.strip() if isinstance(global_key, str) else global_key
+        self.settings = _settings(base_url=base_url, timeout_s=timeout_s, retry_429=retry_429, user_agent=user_agent)
+        self._transport = transport or SyncTransport(self.settings, global_key=self.global_key)
 
-    async def _request(
+    def start(self) -> None:
+        self._transport.start()
+
+    def close(self) -> None:
+        self._transport.close()
+
+    def __enter__(self) -> ERLC:
+        self.start()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        self.close()
+
+    def request(
         self,
-        ctx: ERLCContext,
         method: str,
         path: str,
         *,
-        path_template: Optional[str] = None,
-        params: Optional[Mapping[str, Any]] = None,
+        server_key: str | None = None,
+        params: Mapping[str, Any] | None = None,
         json: Any = None,
-        idempotent: bool = True,
-        extra_headers: Optional[Mapping[str, str]] = None,
+        headers: Mapping[str, str] | None = None,
     ) -> Any:
-        headers = {"Server-Key": ctx.server_key}
-        if extra_headers:
-            # Ensure Server-Key cannot be overwritten by mistake
-            for k, v in extra_headers.items():
-                if k.lower() == "server-key":
-                    continue
-                headers[k] = v
-
-        return await self._http.request(
-            key_id=ctx.key_id,
+        return self._transport.request(
+            server_key=_default_key(self.server_key, server_key),
             method=method,
             path=path,
-            path_template=path_template,
-            headers=headers,
             params=params,
             json=json,
-            idempotent=idempotent,
+            headers=headers,
         )
+
+    def server(
+        self,
+        *,
+        server_key: str | None = None,
+        raw: bool = False,
+        include: Iterable[str] | str | None = None,
+        all: bool = False,
+        players: bool = False,
+        staff: bool = False,
+        join_logs: bool = False,
+        queue: bool = False,
+        kill_logs: bool = False,
+        command_logs: bool = False,
+        mod_calls: bool = False,
+        emergency_calls: bool = False,
+        vehicles: bool = False,
+    ) -> Any | ServerBundle:
+        payload = self.request(
+            "GET",
+            "/v2/server",
+            server_key=server_key,
+            params=_include_params(
+                include=include,
+                all=all,
+                players=players,
+                staff=staff,
+                join_logs=join_logs,
+                queue=queue,
+                kill_logs=kill_logs,
+                command_logs=command_logs,
+                mod_calls=mod_calls,
+                emergency_calls=emergency_calls,
+                vehicles=vehicles,
+            ),
+        )
+        return payload if raw else decode_server_bundle(payload)
+
+    def players(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Player]:
+        payload = self.server(server_key=server_key, raw=True, players=True)
+        return payload["Players"] if raw else decode_players(payload.get("Players", []))
+
+    def staff(self, *, server_key: str | None = None, raw: bool = False) -> Any | StaffList:
+        payload = self.server(server_key=server_key, raw=True, staff=True)
+        return payload["Staff"] if raw else decode_staff(payload.get("Staff", {}))
+
+    def queue(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[int]:
+        payload = self.server(server_key=server_key, raw=True, queue=True)
+        return payload["Queue"] if raw else decode_queue(payload.get("Queue", []))
+
+    def join_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[JoinLogEntry]:
+        payload = self.server(server_key=server_key, raw=True, join_logs=True)
+        return payload["JoinLogs"] if raw else decode_join_logs(payload.get("JoinLogs", []))
+
+    def kill_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[KillLogEntry]:
+        payload = self.server(server_key=server_key, raw=True, kill_logs=True)
+        return payload["KillLogs"] if raw else decode_kill_logs(payload.get("KillLogs", []))
+
+    def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Any]:
+        payload = self.server(server_key=server_key, raw=True, command_logs=True)
+        return payload["CommandLogs"] if raw else decode_command_logs(payload.get("CommandLogs", []))
+
+    def mod_calls(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[ModCallEntry]:
+        payload = self.server(server_key=server_key, raw=True, mod_calls=True)
+        return payload["ModCalls"] if raw else decode_mod_calls(payload.get("ModCalls", []))
+
+    def emergency_calls(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[EmergencyCall]:
+        payload = self.server(server_key=server_key, raw=True, emergency_calls=True)
+        return payload["EmergencyCalls"] if raw else decode_emergency_calls(payload.get("EmergencyCalls", []))
+
+    def vehicles(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Vehicle]:
+        payload = self.server(server_key=server_key, raw=True, vehicles=True)
+        return payload["Vehicles"] if raw else decode_vehicles(payload.get("Vehicles", []))
+
+    def bans(self, *, server_key: str | None = None, raw: bool = False) -> Any | BanList:
+        payload = self.request("GET", "/v1/server/bans", server_key=server_key)
+        return payload if raw else decode_bans(payload)
+
+    def command(
+        self,
+        command: str | Command,
+        *,
+        server_key: str | None = None,
+        raw: bool = False,
+        dry_run: bool = False,
+    ) -> Any | CommandResult:
+        command_text = normalize_command(command)
+        if dry_run:
+            payload = {"message": "Dry-run validation passed. Command not sent.", "success": True, "command": command_text}
+            return payload if raw else decode_command_result(payload)
+        payload = self.request(
+            "POST",
+            "/v2/server/command",
+            server_key=server_key,
+            json={"command": command_text},
+        )
+        return payload if raw else decode_command_result(payload)
+
+    def validate_key(self, *, server_key: str | None = None) -> ValidationResult:
+        try:
+            self.server(server_key=server_key, raw=True)
+            return ValidationResult(status=ValidationStatus.OK)
+        except AuthError:
+            return ValidationResult(status=ValidationStatus.AUTH_ERROR)
+        except RateLimitError as exc:
+            return ValidationResult(status=ValidationStatus.RATE_LIMITED, retry_after=exc.retry_after)
+        except NetworkError:
+            return ValidationResult(status=ValidationStatus.NETWORK_ERROR)
+        except APIError as exc:
+            return ValidationResult(status=ValidationStatus.API_ERROR, api_status=exc.status)
+
+    def health_check(self, *, server_key: str | None = None) -> ValidationResult:
+        return self.validate_key(server_key=server_key)
+
+
+__all__ = [
+    "AsyncERLC",
+    "ERLC",
+    "ValidationResult",
+    "ValidationStatus",
+]

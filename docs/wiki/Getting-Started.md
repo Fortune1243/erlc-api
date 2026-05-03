@@ -1,77 +1,35 @@
 # Getting Started
 
-Use this page to get from zero to a reliable first integration.
+Install:
 
-## Requirements
-
-- Python 3.11+
-- Valid ER:LC server key
-- Async runtime (`asyncio`)
-
-## Install
-
-```
-pip install git+https://github.com/Fortune1243/erlc-api.git
+```bash
+pip install erlc-api
 ```
 
-Local development:
-
-```
-pip install -e .[dev]
-```
-
-Optional extras:
-
-```
-pip install -e .[pydantic]       # validated v2 models
-pip install -e .[redis]          # redis cache backend
-pip install -e .[observability]  # structlog + opentelemetry-api
-pip install -e .[webhooks]       # event webhook verification helpers
-```
-
-## First Successful Call
+Async:
 
 ```python
-import asyncio
-from erlc_api import ERLCClient
+from erlc_api import AsyncERLC
 
-
-async def main() -> None:
-    async with ERLCClient() as client:
-        ctx = client.ctx("your-server-key")
-        status = await client.v1.server(ctx)
-        print(status)
-
-
-asyncio.run(main())
+async with AsyncERLC("server-key") as api:
+    players = await api.players()
+    print(players[0].name)
 ```
 
-## Choose Response Mode
-
-- Raw: `client.v1.*`, `client.v2.*`
-- Typed dataclass: `*_typed`
-- Validated v2 (Pydantic): `*_validated(..., strict=False)`
-
-## Validate Keys During Setup
+Sync:
 
 ```python
-result = await client.validate_key(ctx)
-if result.status != "ok":
-    print("validation failed:", result.status)
+from erlc_api import ERLC
+
+with ERLC("server-key") as api:
+    print(api.server())
 ```
 
-## Useful Operational APIs
+Override the default key per call:
 
 ```python
-print(client.cache_stats())
-print(client.request_replay(limit=10))
-await client.invalidate(ctx, "/v1/server/players")
+await api.players(server_key="other-key")
 ```
 
-## Next Steps
+Use `global_key=` when the PRC large-app flow gives your app an Authorization key.
 
-- Function index: [Function-List.md](./Function-List.md)
-- Event webhooks + custom commands: [Event-Webhooks-and-Custom-Commands.md](./Event-Webhooks-and-Custom-Commands.md)
-- Bot path: [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
-- Backend path: [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md)
-- Reliability deep dive: [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)

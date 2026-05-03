@@ -1,351 +1,318 @@
 # erlc-api
 
-A production-ready asynchronous Python wrapper for the **ER:LC PRC Private Server API** with first-class **v1 + v2** support, multi-server contexts, typed models, resilience controls, and integration helpers.
+Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a breaking,
+v2-first release with flat sync and async clients, typed dataclass responses by
+default, `raw=True` escape hatches, flexible commands, and explicit utility
+modules that only load when you import them.
 
-> Release status in this repo: **v1.0.1** + unreleased enhancements documented below.
+## Install And Extras
 
----
-
-## Why `erlc-api`
-
-`erlc-api` is designed for real bot/backend operations, not thin endpoint forwarding.
-
-- Async-first `httpx` client
-- Multi-server contexts from one shared client
-- Bucket-aware rate limiting with reset-aware pre-acquire
-- Configurable retries (`429` / `5xx` / network) with exponential backoff + jitter
-- Optional in-flight request coalescing for identical idempotent GET calls
-- Built-in TTL caching + manual invalidation + cache statistics
-- Optional per-bucket circuit breaker
-- Raw + typed + validated v2 response modes
-- Structured command ergonomics with dry-run and tracking
-- Log stream helpers and live server tracker
-- Event webhook verification + custom-command routing helpers
-- Expanded production error taxonomy
-
----
-
-## Installation
-
-```
-pip install -e .
+```bash
+pip install erlc-api
 ```
 
-Development:
+Development install:
 
-```
+```bash
 pip install -e .[dev]
 ```
 
 Optional extras:
 
+| Extra | Installs | Used by |
+| --- | --- | --- |
+| `webhooks` | `cryptography` | Event webhook Ed25519 signature verification |
+| `export` | `openpyxl` | `Exporter(...).xlsx(...)` |
+| `time` | `python-dateutil` | `TimeTools().parse(..., enhanced=True)` |
+| `rich` | `rich` | `Formatter().rich_table(...)` |
+| `scheduling` | `apscheduler` | Advanced scheduling integrations around watchers |
+| `utils` | all utility extras | Export, time, rich, and scheduling helpers |
+| `all` | webhooks plus utility extras | Everything optional |
+
+Example:
+
+```bash
+pip install "erlc-api[webhooks,export]"
 ```
-pip install -e .[pydantic]       # validated v2 models
-pip install -e .[redis]          # redis cache backend
-pip install -e .[observability]  # structlog + opentelemetry-api
-pip install -e .[webhooks]       # event webhook signature verification helpers
-pip install -e .[all]            # all optional extras
-```
-
-Requirements:
-
-- Python 3.11+
-- `httpx>=0.27.0`
-
----
 
 ## Quickstart
 
+Async apps and bots:
+
 ```python
 import asyncio
-from erlc_api import ERLCClient
+from erlc_api import AsyncERLC, cmd
 
 
 async def main() -> None:
-    async with ERLCClient() as client:
-        ctx = client.ctx("your-server-key")
+    async with AsyncERLC("server-key") as api:
+        bundle = await api.server(players=True, queue=True, staff=True)
+        result = await api.command(cmd.h("Hello from the API"))
 
-        server = await client.v1.server(ctx)
-        bundle = await client.v2.server_default_typed(ctx)
-        validation = await client.validate_key(ctx)
-
-        print(server)
-        print(bundle.server_name)
-        print(validation.status)
+        print(bundle.name, len(bundle.players or []), result.message)
 
 
 asyncio.run(main())
 ```
 
----
-
-## API Surfaces
-
-### v1 methods
-
-Raw:
-
-- `client.v1.command(ctx, command, dry_run=False)`
-- `client.v1.server(ctx)`
-- `client.v1.players(ctx)`
-- `client.v1.join_logs(ctx)`
-- `client.v1.queue(ctx)`
-- `client.v1.kill_logs(ctx)`
-- `client.v1.command_logs(ctx)`
-- `client.v1.mod_calls(ctx)`
-- `client.v1.bans(ctx)`
-- `client.v1.vehicles(ctx)`
-- `client.v1.staff(ctx)`
-
-Typed:
-
-- `client.v1.command_typed(...)`
-- `client.v1.server_typed(...)`
-- `client.v1.players_typed(...)`
-- `client.v1.join_logs_typed(...)`
-- `client.v1.queue_typed(...)`
-- `client.v1.kill_logs_typed(...)`
-- `client.v1.command_logs_typed(...)`
-- `client.v1.mod_calls_typed(...)`
-- `client.v1.bans_typed(...)`
-- `client.v1.vehicles_typed(...)`
-- `client.v1.staff_typed(...)`
-
-Command ergonomics:
-
-- `client.v1.send_command(...)`
-- `client.v1.command_with_tracking(...)`
-- `client.v1.command_history(...)`
-
-Log streams:
-
-- `client.v1.command_logs_stream(...)`
-- `client.v1.join_logs_stream(...)`
-- `client.v1.kill_logs_stream(...)`
-
-### v2 methods
-
-Raw:
-
-- `client.v2.server(...)`
-- `client.v2.server_all(...)`
-- `client.v2.server_default(...)`
-
-Typed dataclass:
-
-- `client.v2.server_typed(...)`
-- `client.v2.server_all_typed(...)`
-- `client.v2.server_default_typed(...)`
-
-Validated (requires `pydantic` extra):
-
-- `client.v2.server_validated(..., strict=False)`
-- `client.v2.server_all_validated(..., strict=False)`
-- `client.v2.server_default_validated(..., strict=False)`
-
-Fluent v2 query builder:
-
-- `client.v2.server_query(ctx)`
-- Includes: `.include_players()`, `.include_staff()`, `.include_helpers()`, `.include_join_logs()`, `.include_queue()`, `.include_kill_logs()`, `.include_command_logs()`, `.include_mod_calls()`, `.include_vehicles()`, `.include_emergency_calls()`, `.include_all()`
-- Fetch: `.fetch()`, `.fetch_typed()`, `.fetch_validated(strict=False)`
-
-### Event webhook helpers
-
-- `extract_webhook_signature_headers(...)`
-- `verify_event_webhook_signature(...)`
-- `assert_valid_event_webhook_signature(...)`
-- `decode_event_webhook_payload(...)`
-- `parse_custom_command_text(...)`
-- `EventWebhookRouter(...)`
-
----
-
-## Typed Models (Highlights)
-
-- `Player` includes `wanted_stars` and `location_typed: PlayerLocation | None`
-- `Vehicle` includes `color_hex`, `color_name`, `color_info: VehicleColor | None`
-- `V2ServerBundle` includes `helpers` and `emergency_calls`
-- `EmergencyCall` includes team/caller/position/started timestamp helpers
-- Unknown fields are preserved via `extra`
-- Top-level shape mismatch raises `ModelDecodeError`
-
----
-
-## Client Reliability and Operations
-
-### `ClientConfig` capabilities
-
-- Retry config: `max_retries`, `retry_429`, `retry_5xx`, `retry_network`
-- Backoff config: `backoff_base_s`, `backoff_cap_s`, `backoff_jitter_s`
-- Connection pooling: `max_connections`, `max_keepalive_connections`, `keepalive_expiry_s`
-- Coalescing: `request_coalescing`
-- Cache: `cache_enabled`, `cache_backend`, `cache_ttl_by_path`
-- Circuit breaker: `circuit_breaker_enabled`, `circuit_failure_threshold`, `circuit_open_s`
-- Observability hooks: `metrics_sink`, `use_structlog`, `opentelemetry_tracing_enabled`, `debug_dump`
-- Request replay buffer: `request_replay_size`
-
-Command metrics are emitted to `metrics_sink.on_command(...)` from:
-
-- `client.v1.command(...)`
-- `client.v1.send_command(...)`
-- `client.v1.command_with_tracking(...)` (single final metric; no duplicate count)
-
-### Cache controls
+Sync scripts:
 
 ```python
-await client.invalidate(ctx)                     # all cached endpoints for ctx
-await client.invalidate(ctx, "/v1/server")      # specific endpoint
-await client.clear_cache()                       # clear all cache entries
-print(client.cache_stats())                      # hit/miss + backend stats
+from erlc_api import ERLC
+
+with ERLC("server-key") as api:
+    players = api.players()
+    result = api.command("h Hello")
+    print(len(players), result.message)
 ```
 
-### Request replay (debug)
+## Client Reference
+
+`AsyncERLC` is for async frameworks, Discord bots, FastAPI apps, background
+workers, and anything already running an event loop.
 
 ```python
-for item in client.request_replay(limit=20):
-    print(item["method"], item["path"], item["status"])
-```
-
----
-
-## Server Tracking and Events
-
-```python
-from erlc_api import TrackerEvent
-
-async with client.track_server(ctx, interval_s=2.0) as tracker:
-    tracker.on(TrackerEvent.PLAYER_JOIN, lambda player: print("joined", player.name))
-    tracker.on("command_executed", lambda entry: print("cmd", entry.command))  # string form still supported
-
-    await asyncio.sleep(10)
-    print("players", len(tracker.players))
-```
-
-Supported event names:
-
-- `player_join`
-- `player_leave`
-- `staff_join`
-- `staff_leave`
-- `command_executed`
-- `snapshot`
-
-Typed event enum:
-
-- `TrackerEvent.PLAYER_JOIN`
-- `TrackerEvent.PLAYER_LEAVE`
-- `TrackerEvent.STAFF_JOIN`
-- `TrackerEvent.STAFF_LEAVE`
-- `TrackerEvent.COMMAND_EXECUTED`
-- `TrackerEvent.SNAPSHOT`
-
----
-
-## Command Builder
-
-```python
-from erlc_api import CommandBuilder
-
-cmd = CommandBuilder.pm(target="PlayerName", message="Hello")
-result = await client.v1.command_with_tracking(ctx, cmd, timeout_s=8.0)
-print(result.inferred_success, result.timed_out_waiting_for_log)
-```
-
-`client.v1.command(...)` intentionally blocks `:log` execution; use command log retrieval/helpers for `:log` workflows.
-
----
-
-## Event Webhooks and Custom Commands
-
-Event webhook helpers are additive and optional. They are designed for PRC event webhook signature verification and routing `;` custom commands.
-
-```python
-from fastapi import FastAPI, HTTPException, Request
-from erlc_api import (
-    EventWebhookRouter,
-    assert_valid_event_webhook_signature,
+AsyncERLC(
+    server_key: str | None = None,
+    *,
+    global_key: str | None = None,
+    base_url: str = "https://api.policeroleplay.community",
+    timeout_s: float = 20.0,
+    retry_429: bool = True,
+    user_agent: str | None = None,
 )
-
-app = FastAPI()
-router = EventWebhookRouter(command_prefix=";")
-
-
-@router.on_command("ping")
-def ping(command, event):
-    return {"ok": True, "command": command.command_name, "args": list(command.args)}
-
-
-@router.on_unknown
-def unknown(event):
-    return {"ok": False, "event_type": event.event_type}
-
-
-@app.post("/erlc/events")
-async def erlc_events(request: Request):
-    raw_body = await request.body()
-    try:
-        assert_valid_event_webhook_signature(
-            raw_body=raw_body,
-            headers=request.headers,
-            max_skew_s=300,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-
-    payload = await request.json()
-    results = await router.dispatch(payload)
-    return {"handled": len(results), "results": results}
 ```
 
-Important verification rules implemented here:
+Use it as an async context manager, or call `await api.start()` and
+`await api.close()` yourself.
 
-- Signature uses `message = timestamp + raw_body` (raw bytes, not re-serialized JSON).
-- `X-Signature-Timestamp` and `X-Signature-Ed25519` are both required.
-- Default public key is PRC’s published Ed25519 SPKI key.
-
----
-
-## Error Taxonomy
-
-Base classes:
-
-- `ERLCError`
-- `APIError`
-- `AuthError`
-- `NotFoundError`
-- `NetworkError`
-- `RateLimitError`
-- `ModelDecodeError`
-
-Extended classes:
-
-- `PermissionDeniedError`
-- `PlayerNotFoundError`
-- `ServerEmptyError`
-- `RobloxCommunicationError`
-- `InvalidCommandError`
-- `CircuitOpenError`
-
----
-
-## Validation Helpers
+`ERLC` has the same constructor and method names for sync scripts:
 
 ```python
-result = await client.validate_key(ctx)
-if result.status != "ok":
-    print(result.status, result.retry_after)
+ERLC(
+    server_key: str | None = None,
+    *,
+    global_key: str | None = None,
+    base_url: str = "https://api.policeroleplay.community",
+    timeout_s: float = 20.0,
+    retry_429: bool = True,
+    user_agent: str | None = None,
+)
 ```
 
-Aliases/utilities:
+Every request sends `Server-Key`. If `global_key=` is configured, requests also
+send `Authorization`.
 
-- `await client.health_check(ctx)`
-- `helpers.validate_server_key(client, ctx)`
-- `helpers.fetch_log_commands(client, ctx, payload_prefix=...)`
+Every endpoint method accepts `server_key=` so one client can work with multiple
+servers:
 
----
+```python
+api = ERLC("primary-server-key")
 
-## Notes
+primary = api.players()
+secondary = api.players(server_key="secondary-server-key")
+```
 
-- Non-idempotent command requests are not auto-replayed.
-- v2 access depends on PRC allowing your key.
-- `py.typed` is included for static typing support.
+`validate_key()` and `health_check()` return `ValidationResult` instead of
+raising common API errors.
+
+## Endpoint Methods
+
+Typed models are returned by default. Pass `raw=True` to receive the exact JSON
+payload returned by PRC.
+
+| Method | PRC endpoint | Default return type | Notes |
+| --- | --- | --- | --- |
+| `server(...)` | `GET /v2/server` | `ServerBundle` | Accepts include flags for v2 sections |
+| `players()` | `GET /v2/server?Players=true` | `list[Player]` | Parses `PlayerName:Id` |
+| `staff()` | `GET /v2/server?Staff=true` | `StaffList` | Staff object maps plus `.members()` |
+| `queue()` | `GET /v2/server?Queue=true` | `list[int]` | Queue user IDs in API order |
+| `join_logs()` | `GET /v2/server?JoinLogs=true` | `list[JoinLogEntry]` | Includes join/leave flag and timestamp |
+| `kill_logs()` | `GET /v2/server?KillLogs=true` | `list[KillLogEntry]` | Includes killer/victim helpers |
+| `command_logs()` | `GET /v2/server?CommandLogs=true` | `list[CommandLogEntry]` | Useful with `Finder` and `Analyzer` |
+| `mod_calls()` | `GET /v2/server?ModCalls=true` | `list[ModCallEntry]` | Includes caller/moderator helpers |
+| `emergency_calls()` | `GET /v2/server?EmergencyCalls=true` | `list[EmergencyCall]` | v2 emergency call payloads |
+| `vehicles()` | `GET /v2/server?Vehicles=true` | `list[Vehicle]` | Vehicle model, owner, plate, color |
+| `bans()` | `GET /v1/server/bans` | `BanList` | Uses v1 because v2 does not replace it |
+| `command(command, ...)` | `POST /v2/server/command` | `CommandResult` | Accepts strings or `cmd` values |
+| `request(method, path, ...)` | Any path | raw JSON/text | Low-level escape hatch |
+
+`server()` include options:
+
+```python
+bundle = await api.server(players=True, queue=True, staff=True)
+everything = await api.server(all=True)
+custom = await api.server(include=["players", "vehicles"])
+raw_payload = await api.server(all=True, raw=True)
+```
+
+## Command API
+
+Commands are intentionally flexible:
+
+```python
+from erlc_api import cmd, normalize_command
+
+await api.command(":h hi")
+await api.command("h hi")
+await api.command(cmd.h("hi"))
+await api.command(cmd.pm("Player", "hello"))
+await api.command(cmd("pm", "Player", "hello"))
+
+assert normalize_command("h hi") == ":h hi"
+```
+
+Validation is minimal and predictable:
+
+| Rule | Behavior |
+| --- | --- |
+| Leading colon missing | Added automatically |
+| Blank command | Raises `ValueError` |
+| Newline in command | Raises `ValueError` |
+| Missing command name | Raises `ValueError` |
+| `:log` | Not blocked by the wrapper |
+
+Dry-run validates and returns a local `CommandResult` without sending HTTP:
+
+```python
+preview = await api.command(cmd.pm("Player", "hello"), dry_run=True)
+print(preview.raw["command"], preview.success)
+```
+
+## Models
+
+Models are frozen dataclasses. They preserve the original payload in `.raw`,
+unknown fields in `.extra`, and convert back to dictionaries with `.to_dict()`.
+
+Key models:
+
+| Model | Returned by | Useful fields |
+| --- | --- | --- |
+| `ServerInfo` | `server()` without sections | `name`, `owner_id`, `current_players`, `max_players` |
+| `ServerBundle` | `server()` | server fields plus optional `players`, `staff`, logs, queue, vehicles |
+| `Player` | `players()` | `player`, `name`, `user_id`, `permission`, `callsign`, `team`, `location` |
+| `StaffList` | `staff()` | `co_owners`, `admins`, `mods`, `helpers`, `.members()` |
+| `CommandLogEntry` | `command_logs()` | `player`, `name`, `user_id`, `timestamp`, `command` |
+| `CommandResult` | `command()` | `message`, `success` |
+
+```python
+players = await api.players()
+first = players[0]
+
+print(first.name, first.user_id)
+print(first.extra)
+print(first.to_dict())
+```
+
+Parse PRC `PlayerName:Id` strings directly:
+
+```python
+from erlc_api import parse_player_identifier
+
+name, user_id = parse_player_identifier("Avi:123")
+```
+
+## Utility Modules
+
+Utilities are explicit lazy modules. `import erlc_api` only imports clients,
+models, errors, and `cmd`.
+
+| Module | Import | Purpose |
+| --- | --- | --- |
+| Find | `from erlc_api.find import Finder` | Look up players, staff, vehicles, logs, bans, and calls |
+| Filter | `from erlc_api.filter import Filter` | Chain filters and return `.all()`, `.first()`, `.count()` |
+| Sort | `from erlc_api.sort import Sorter` | Sort by name, timestamp, team, permission, queue position, vehicle fields |
+| Group | `from erlc_api.group import Grouper` | Group by team, permission, role, owner, command, day, hour |
+| Diff | `from erlc_api.diff import Differ` | Compare lists or full server bundles |
+| Wait | `from erlc_api.wait import AsyncWaiter, Waiter` | Poll until joins, leaves, queue changes, logs, or counts occur |
+| Watch | `from erlc_api.watch import AsyncWatcher, Watcher` | Stream snapshot diffs as events and callbacks |
+| Format | `from erlc_api.format import Formatter` | Compact Discord-safe, console-safe, and rich text formatting |
+| Analytics | `from erlc_api.analytics import Analyzer` | Dashboard summaries, distributions, command usage, moderation trends |
+| Export | `from erlc_api.export import Exporter` | JSON, CSV, Markdown, HTML, optional XLSX |
+| Moderation | `from erlc_api.moderation import AsyncModerator, Moderator` | Safe command composition, previews, audit messages |
+| Time | `from erlc_api.time import TimeTools` | Timestamp parsing, age strings, windows, timezone formatting |
+| Schema | `from erlc_api.schema import SchemaInspector` | Field discovery, raw/extra inspection, payload diagnostics |
+
+Example:
+
+```python
+from erlc_api.find import Finder
+from erlc_api.filter import Filter
+from erlc_api.export import Exporter
+
+bundle = await api.server(all=True)
+player = Finder(bundle).player("Avi")
+police = Filter(bundle.players or []).team("Police").all()
+csv_text = Exporter(police).csv()
+```
+
+## Errors
+
+All wrapper exceptions inherit from `ERLCError`.
+
+| Exception | Raised when |
+| --- | --- |
+| `APIError` | Non-success response without a more specific mapping |
+| `BadRequestError` | Request payload, path, or params are invalid |
+| `AuthError` | Server key or global key is missing, invalid, banned, or unauthorized |
+| `PermissionDeniedError` | A valid key cannot access the resource |
+| `NotFoundError` | The requested API path/resource was not found |
+| `NetworkError` | Timeout, DNS, connection, or transport failure |
+| `RateLimitError` | PRC returns `429` or a rate-limit error code |
+| `InvalidCommandError` | Command syntax/payload is rejected by PRC |
+| `RestrictedCommandError` | PRC restricts the command from API execution |
+| `ProhibitedMessageError` | Command text is prohibited by PRC |
+| `ServerOfflineError` | Server is offline or unavailable for the request |
+| `RobloxCommunicationError` | PRC cannot communicate with Roblox or the module |
+| `ModuleOutdatedError` | In-game module must be updated |
+| `ModelDecodeError` | Typed decoding received an unexpected payload shape |
+
+```python
+from erlc_api import ERLCError, RateLimitError
+
+try:
+    players = await api.players()
+except RateLimitError as exc:
+    print(exc.retry_after, exc.reset_epoch_s, exc.bucket)
+except ERLCError as exc:
+    print(exc.status_code, exc.error_code, exc.body_excerpt)
+```
+
+## Rate Limits
+
+On `429`, `RateLimitError` exposes:
+
+| Attribute | Meaning |
+| --- | --- |
+| `retry_after` / `retry_after_s` | Seconds to wait when PRC provides `Retry-After` or body retry data |
+| `reset_epoch_s` | Epoch reset time parsed from `X-RateLimit-Reset` |
+| `bucket` | Bucket name from `X-RateLimit-Bucket` |
+| `error_code` | PRC error code when present |
+
+By default `retry_429=True`, so the transport sleeps once and retries once when
+it has retry timing. Set `retry_429=False` to handle rate limits yourself.
+
+## Wiki Deep Dives
+
+The README is the compact API reference. The full GitHub Wiki source lives in
+`docs/wiki`:
+
+- [Clients and Authentication](docs/wiki/Clients-and-Authentication.md)
+- [Endpoint Reference](docs/wiki/Endpoint-Reference.md)
+- [Models Reference](docs/wiki/Models-Reference.md)
+- [Commands Reference](docs/wiki/Commands-Reference.md)
+- [Utilities Reference](docs/wiki/Utilities-Reference.md)
+- [Waiters and Watchers](docs/wiki/Waiters-and-Watchers.md)
+- [Formatting, Analytics, and Export](docs/wiki/Formatting-Analytics-and-Export.md)
+- [Moderation Helpers](docs/wiki/Moderation-Helpers.md)
+- [Webhooks Reference](docs/wiki/Webhooks-Reference.md)
+- [Errors and Rate Limits](docs/wiki/Errors-and-Rate-Limits.md)
+- [Migration to v2](docs/wiki/Migration-to-v2.md)
+
+## Development
+
+```powershell
+$env:PYTHONPATH = "src"
+python -m pytest -q
+python -m ruff check src tests scripts
+```

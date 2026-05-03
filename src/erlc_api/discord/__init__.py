@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import AsyncIterator
 
-from ..client import ERLCClient
-from ..context import ERLCContext
+from ..client import AsyncERLC
 from ..models import CommandLogEntry, ModCallEntry, Player
 from ..utils.polling import poll_players
 
@@ -57,14 +56,7 @@ def _validate_interval(interval_s: float) -> None:
 
 
 def _mod_call_key(entry: ModCallEntry) -> str:
-    return "|".join(
-        [
-            str(entry.timestamp),
-            entry.player or "",
-            entry.reason or "",
-            entry.location or "",
-        ]
-    )
+    return "|".join([str(entry.timestamp), entry.caller or "", entry.moderator or ""])
 
 
 def _command_log_key(entry: CommandLogEntry) -> str:
@@ -72,22 +64,20 @@ def _command_log_key(entry: CommandLogEntry) -> str:
 
 
 async def iter_player_events(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
     include_initial: bool = False,
 ) -> AsyncIterator[PlayerJoinEvent | PlayerLeaveEvent]:
-    async for snapshot in poll_players(client, ctx, interval_s=interval_s):
+    async for snapshot in poll_players(client, server_key=server_key, interval_s=interval_s):
         if snapshot.previous is None:
             if include_initial:
                 for player in snapshot.current:
                     yield PlayerJoinEvent(player=player, fetched_at_epoch=snapshot.fetched_at_epoch)
             continue
-
         if snapshot.diff is None:
             continue
-
         for player in snapshot.diff.joined:
             yield PlayerJoinEvent(player=player, fetched_at_epoch=snapshot.fetched_at_epoch)
         for player in snapshot.diff.left:
@@ -95,17 +85,16 @@ async def iter_player_events(
 
 
 async def iter_mod_call_events(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
     include_initial: bool = False,
 ) -> AsyncIterator[ModCallEvent]:
     _validate_interval(interval_s)
     previous_keys: set[str] | None = None
-
     while True:
-        current = await client.v1.mod_calls_typed(ctx)
+        current = await client.mod_calls(server_key=server_key)
         if previous_keys is None:
             if include_initial:
                 for entry in current:
@@ -113,32 +102,26 @@ async def iter_mod_call_events(
             previous_keys = {_mod_call_key(entry) for entry in current}
             await asyncio.sleep(interval_s)
             continue
-
         current_keys = {_mod_call_key(entry) for entry in current}
-        emitted_keys: set[str] = set()
         for entry in current:
             key = _mod_call_key(entry)
-            if key in previous_keys or key in emitted_keys:
-                continue
-            emitted_keys.add(key)
-            yield ModCallEvent(entry=entry, fetched_at_epoch=datetime.now(tz=timezone.utc).timestamp())
-
+            if key not in previous_keys:
+                yield ModCallEvent(entry=entry, fetched_at_epoch=datetime.now(tz=timezone.utc).timestamp())
         previous_keys = current_keys
         await asyncio.sleep(interval_s)
 
 
 async def iter_command_log_events(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     interval_s: float = 5.0,
     include_initial: bool = False,
 ) -> AsyncIterator[CommandLogEvent]:
     _validate_interval(interval_s)
     previous_keys: set[str] | None = None
-
     while True:
-        current = await client.v1.command_logs_typed(ctx)
+        current = await client.command_logs(server_key=server_key)
         if previous_keys is None:
             if include_initial:
                 for entry in current:
@@ -146,16 +129,11 @@ async def iter_command_log_events(
             previous_keys = {_command_log_key(entry) for entry in current}
             await asyncio.sleep(interval_s)
             continue
-
         current_keys = {_command_log_key(entry) for entry in current}
-        emitted_keys: set[str] = set()
         for entry in current:
             key = _command_log_key(entry)
-            if key in previous_keys or key in emitted_keys:
-                continue
-            emitted_keys.add(key)
-            yield CommandLogEvent(entry=entry, fetched_at_epoch=datetime.now(tz=timezone.utc).timestamp())
-
+            if key not in previous_keys:
+                yield CommandLogEvent(entry=entry, fetched_at_epoch=datetime.now(tz=timezone.utc).timestamp())
         previous_keys = current_keys
         await asyncio.sleep(interval_s)
 

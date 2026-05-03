@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..models import Player, StaffMember, V2ServerBundle, Vehicle
+from ..models import Player, ServerBundle, StaffList, StaffMember, Vehicle
 
 
 def _increment(bucket: dict[str, int], key: str | None) -> None:
@@ -17,10 +17,14 @@ def count_players_by_team(players: list[Player]) -> dict[str, int]:
     return counts
 
 
-def count_staff_by_permission(staff_members: list[StaffMember]) -> dict[str, int]:
+def _staff_members(staff: StaffList | list[StaffMember]) -> list[StaffMember]:
+    return staff.members if isinstance(staff, StaffList) else staff
+
+
+def count_staff_by_permission(staff_members: StaffList | list[StaffMember]) -> dict[str, int]:
     counts: dict[str, int] = {}
-    for member in staff_members:
-        _increment(counts, member.permission)
+    for member in _staff_members(staff_members):
+        _increment(counts, member.role)
     return counts
 
 
@@ -42,19 +46,19 @@ class DashboardMetrics:
     vehicles_by_team: dict[str, int] = field(default_factory=dict)
 
 
-def compute_dashboard_metrics(bundle: V2ServerBundle) -> DashboardMetrics:
+def compute_dashboard_metrics(bundle: ServerBundle) -> DashboardMetrics:
     players = bundle.players or []
     queue = bundle.queue or []
-    staff = bundle.staff or []
+    staff = bundle.staff or StaffList()
+    staff_members = staff.members
     vehicles = bundle.vehicles or []
-
     return DashboardMetrics(
         player_count=len(players),
         queue_count=len(queue),
-        staff_count=len(staff),
+        staff_count=len(staff_members),
         vehicle_count=len(vehicles),
         players_by_team=count_players_by_team(players),
-        staff_by_permission=count_staff_by_permission(staff),
+        staff_by_permission=count_staff_by_permission(staff_members),
         vehicles_by_team=count_vehicles_by_team(vehicles),
     )
 

@@ -1,47 +1,25 @@
 # FAQ
 
-## Is this an official PRC SDK?
+## Is this official?
 
-No. This is an independent community wrapper for the ER:LC PRC Private Server API.
+No. This is an independent community wrapper for the ER:LC PRC API.
 
-## Why choose this over a thin endpoint wrapper?
+## Is v2.0 breaking?
 
-Because production workloads need reliability features: bucket-aware limiter behavior, retry controls, request coalescing, caching, and structured error handling.
+Yes. The public API is now `AsyncERLC` and `ERLC` with flat methods.
 
-## Can I use one client for multiple servers?
+## How do I use multiple servers?
 
-Yes. Use one `ERLCClient` and create per-server contexts with `client.ctx(server_key)`.
+Set a default server key on the client and override with `server_key=` when needed.
 
-## Does it support both v1 and v2?
+## Can I get raw JSON?
 
-Yes. Both are supported with raw methods and typed methods.
+Yes. Pass `raw=True` to endpoint methods.
 
-## Does typed mode replace raw mode?
+## Is `:log` blocked?
 
-No. Raw mode is fully available. Typed/validated modes are additive.
+No. v2.0 only performs minimal command syntax validation.
 
-## How do validated responses work?
+## Where did cache, metrics, replay, and Redis go?
 
-Install `erlc-api[pydantic]` and use `client.v2.server_validated(...)`, `server_all_validated(...)`, or `server_default_validated(...)`.
-
-## Why is `:log` blocked in `client.v1.command(...)`?
-
-To avoid command-channel misuse for logging workflows. Use command log retrieval/parsing helpers instead.
-
-## How do I run command syntax checks without sending?
-
-Use `dry_run=True` with `client.v1.command(...)` / `send_command(...)`.
-
-## How do I monitor live server state?
-
-Use `async with client.track_server(ctx) as tracker:` and register callbacks with either string names or `TrackerEvent` enum values (`PLAYER_JOIN`, `PLAYER_LEAVE`, `STAFF_JOIN`, `STAFF_LEAVE`, `COMMAND_EXECUTED`, `SNAPSHOT`).
-
-## How do I inspect cache/replay state?
-
-- `client.cache_stats()`
-- `await client.invalidate(ctx, endpoint=None)`
-- `client.request_replay(limit=...)`
-
-## Are command metrics emitted through `metrics_sink`?
-
-Yes. `on_command(...)` metrics are emitted from `command(...)`, `send_command(...)`, and `command_with_tracking(...)`.
+They were removed to keep the wrapper lightweight.

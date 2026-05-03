@@ -3,20 +3,15 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any, Awaitable, Callable, TYPE_CHECKING
+from typing import Any, Awaitable, Callable
 
-from .context import ERLCContext
-from .models import CommandLogEntry, Player, StaffMember, Vehicle, V2ServerBundle
-
-if TYPE_CHECKING:
-    from .client import ERLCClient
+from .client import AsyncERLC
+from .models import CommandLogEntry, Player, ServerBundle, StaffMember, Vehicle
 
 EventCallback = Callable[..., Any] | Callable[..., Awaitable[Any]]
 
 
 class TrackerEvent(StrEnum):
-    """Typed event names emitted by `ServerTracker`."""
-
     PLAYER_JOIN = "player_join"
     PLAYER_LEAVE = "player_leave"
     STAFF_JOIN = "staff_join"
@@ -28,13 +23,13 @@ class TrackerEvent(StrEnum):
 def _player_key(player: Player) -> str:
     if player.user_id is not None:
         return f"id:{player.user_id}"
-    return f"name:{(player.name or '').strip().lower()}"
+    return f"name:{(player.name or '').lower()}"
 
 
 def _staff_key(staff: StaffMember) -> str:
-    if staff.callsign:
-        return f"callsign:{staff.callsign.strip().lower()}"
-    return f"name:{(staff.name or '').strip().lower()}"
+    if staff.user_id is not None:
+        return f"id:{staff.user_id}"
+    return f"{staff.role or ''}:{staff.name or ''}".lower()
 
 
 @dataclass
@@ -46,35 +41,19 @@ class ServerState:
 
 
 class ServerTracker:
-    """
-    Polling-based live server state tracker with callback event emission.
+    """Small polling tracker retained as an optional utility."""
 
-    Callback events:
-    - `player_join`
-    - `player_leave`
-    - `staff_join`
-    - `staff_leave`
-    - `command_executed`
-    - `snapshot`
-    """
-
-    def __init__(self, client: ERLCClient, ctx: ERLCContext, *, interval_s: float = 2.0) -> None:
+    def __init__(self, client: AsyncERLC, *, server_key: str | None = None, interval_s: float = 2.0) -> None:
         if interval_s <= 0:
             raise ValueError("interval_s must be greater than zero.")
         self._client = client
-        self._ctx = ctx
+        self._server_key = server_key
         self._interval_s = interval_s
         self._state = ServerState()
         self._callbacks: dict[str, list[EventCallback]] = {}
         self._task: asyncio.Task[None] | None = None
         self._running = False
         self._seen_command_keys: set[tuple[int | None, str | None, str | None]] = set()
-
-    @staticmethod
-    def _normalize_event_name(event: str | TrackerEvent) -> str:
-        if isinstance(event, TrackerEvent):
-            return event.value
-        return str(event).strip()
 
     @property
     def state(self) -> ServerState:
@@ -93,22 +72,20 @@ class ServerTracker:
         return self._state.staff
 
     def on(self, event: str | TrackerEvent, callback: EventCallback) -> ServerTracker:
-        """Register a callback for a tracker event (string or `TrackerEvent`)."""
-        event_name = self._normalize_event_name(event)
-        self._callbacks.setdefault(event_name, []).append(callback)
+        name = event.value if isinstance(event, TrackerEvent) else str(event).strip()
+        self._callbacks.setdefault(name, []).append(callback)
         return self
 
     async def _emit(self, event: str | TrackerEvent, *args: Any) -> None:
-        event_name = self._normalize_event_name(event)
-        callbacks = self._callbacks.get(event_name, [])
-        for callback in callbacks:
+        name = event.value if isinstance(event, TrackerEvent) else str(event).strip()
+        for callback in self._callbacks.get(name, []):
             result = callback(*args)
             if asyncio.iscoroutine(result):
                 await result
 
-    async def _poll_once(self) -> V2ServerBundle:
-        return await self._client.v2.server_typed(
-            self._ctx,
+    async def _poll_once(self) -> ServerBundle:
+        return await self._client.server(
+            server_key=self._server_key,
             players=True,
             staff=True,
             vehicles=True,
@@ -121,28 +98,28 @@ class ServerTracker:
             await self._apply_bundle(bundle)
             await asyncio.sleep(self._interval_s)
 
-    async def _apply_bundle(self, bundle: V2ServerBundle) -> None:
+    async def _apply_bundle(self, bundle: ServerBundle) -> None:
         new_players = bundle.players or []
-        new_staff = bundle.staff or []
+        new_staff = bundle.staff.members if bundle.staff is not None else []
         new_vehicles = bundle.vehicles or []
         new_command_logs = bundle.command_logs or []
 
         previous_players = {_player_key(player): player for player in self._state.players}
-        next_players = {_player_key(player): player for player in new_players}
-        for key, player in next_players.items():
+        current_players = {_player_key(player): player for player in new_players}
+        for key, player in current_players.items():
             if key not in previous_players:
                 await self._emit(TrackerEvent.PLAYER_JOIN, player)
         for key, player in previous_players.items():
-            if key not in next_players:
+            if key not in current_players:
                 await self._emit(TrackerEvent.PLAYER_LEAVE, player)
 
         previous_staff = {_staff_key(member): member for member in self._state.staff}
-        next_staff = {_staff_key(member): member for member in new_staff}
-        for key, member in next_staff.items():
+        current_staff = {_staff_key(member): member for member in new_staff}
+        for key, member in current_staff.items():
             if key not in previous_staff:
                 await self._emit(TrackerEvent.STAFF_JOIN, member)
         for key, member in previous_staff.items():
-            if key not in next_staff:
+            if key not in current_staff:
                 await self._emit(TrackerEvent.STAFF_LEAVE, member)
 
         for entry in new_command_logs:
@@ -161,14 +138,12 @@ class ServerTracker:
         await self._emit(TrackerEvent.SNAPSHOT, self._state)
 
     async def start(self) -> None:
-        """Start background polling loop if not already running."""
         if self._running:
             return
         self._running = True
         self._task = asyncio.create_task(self._run())
 
     async def stop(self) -> None:
-        """Stop background polling loop and wait for task cancellation."""
         self._running = False
         if self._task is None:
             return
@@ -180,17 +155,11 @@ class ServerTracker:
         self._task = None
 
     async def __aenter__(self) -> ServerTracker:
-        """Start tracking and return self for async context manager use."""
         await self.start()
         return self
 
     async def __aexit__(self, exc_type: object, exc: object, tb: object) -> None:
-        """Stop tracking when leaving async context manager scope."""
         await self.stop()
 
 
-__all__ = [
-    "TrackerEvent",
-    "ServerState",
-    "ServerTracker",
-]
+__all__ = ["ServerState", "ServerTracker", "TrackerEvent"]

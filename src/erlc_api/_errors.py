@@ -3,13 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 
-def _safe_excerpt(raw: Any, *, limit: int = 300) -> str | None:
-    if raw is None:
+def _safe_excerpt(value: Any, *, limit: int = 300) -> str | None:
+    if value is None:
         return None
-    if isinstance(raw, str):
-        text = raw
-    else:
-        text = repr(raw)
+    text = value if isinstance(value, str) else repr(value)
     text = " ".join(text.split())
     if len(text) <= limit:
         return text
@@ -17,64 +14,71 @@ def _safe_excerpt(raw: Any, *, limit: int = 300) -> str | None:
 
 
 class ERLCError(Exception):
-    """Base exception for wrapper failures with request metadata."""
+    """Base exception for PRC API wrapper failures."""
 
     def __init__(
         self,
         message: str,
         *,
-        method: str,
-        path: str,
+        method: str | None = None,
+        path: str | None = None,
         status: int | None = None,
         body: Any = None,
+        error_code: int | None = None,
     ) -> None:
         super().__init__(message)
         self.message = message
-        self.method = method.upper()
+        self.method = method.upper() if method else None
         self.path = path
         self.status = status
+        self.error_code = error_code
         self.body_excerpt = _safe_excerpt(body)
 
     @property
     def status_code(self) -> int | None:
-        """Backward-compatible alias used by older callers."""
         return self.status
 
     def __str__(self) -> str:
-        bits: list[str] = [f"{self.__class__.__name__}: {self.message}", f"method={self.method}", f"path={self.path}"]
+        parts = [f"{self.__class__.__name__}: {self.message}"]
+        if self.method:
+            parts.append(f"method={self.method}")
+        if self.path:
+            parts.append(f"path={self.path}")
         if self.status is not None:
-            bits.append(f"status={self.status}")
+            parts.append(f"status={self.status}")
+        if self.error_code is not None:
+            parts.append(f"error_code={self.error_code}")
         if self.body_excerpt:
-            bits.append(f"body={self.body_excerpt}")
-        return " | ".join(bits)
+            parts.append(f"body={self.body_excerpt}")
+        return " | ".join(parts)
 
 
 class APIError(ERLCError):
-    """Generic API error for non-success responses."""
+    """Generic non-success response from the PRC API."""
+
+
+class BadRequestError(APIError):
+    """The API rejected the request payload, path, or parameters."""
 
 
 class AuthError(APIError):
-    """Authentication or authorization failure."""
+    """Missing, malformed, expired, banned, or unauthorized API credentials."""
 
 
 class PermissionDeniedError(AuthError):
-    """The authenticated user does not have required permissions."""
+    """The API key is valid but cannot access the requested resource."""
 
 
 class NotFoundError(APIError):
-    """API resource was not found."""
-
-
-class PlayerNotFoundError(NotFoundError):
-    """The requested player was not found in the target server."""
+    """The requested API resource was not found."""
 
 
 class NetworkError(ERLCError):
-    """Transport-level failure (timeouts, DNS, connection errors)."""
+    """Transport-level failure such as timeout, DNS, or connection errors."""
 
 
 class RateLimitError(APIError):
-    """Rate-limit failure that may include retry hints from the API."""
+    """PRC rate limit response with retry metadata when provided."""
 
     def __init__(
         self,
@@ -84,67 +88,74 @@ class RateLimitError(APIError):
         path: str,
         status: int = 429,
         body: Any = None,
+        error_code: int | None = None,
         bucket: str | None = None,
         retry_after: float | None = None,
         reset_epoch_s: float | None = None,
     ) -> None:
-        super().__init__(message, method=method, path=path, status=status, body=body)
+        super().__init__(
+            message,
+            method=method,
+            path=path,
+            status=status,
+            body=body,
+            error_code=error_code,
+        )
         self.bucket = bucket
         self.retry_after = retry_after
         self.reset_epoch_s = reset_epoch_s
 
     @property
     def retry_after_s(self) -> float | None:
-        """Backward-compatible alias used by older callers."""
         return self.retry_after
 
 
-class CircuitOpenError(ERLCError):
-    """Request was rejected because the circuit breaker is open for this bucket."""
-
-    def __init__(
-        self,
-        message: str,
-        *,
-        method: str,
-        path: str,
-        bucket: str | None = None,
-        retry_after: float | None = None,
-    ) -> None:
-        super().__init__(message, method=method, path=path, status=None, body=None)
-        self.bucket = bucket
-        self.retry_after = retry_after
+class InvalidCommandError(BadRequestError):
+    """The command request is missing, malformed, or invalid."""
 
 
-class ServerEmptyError(APIError):
-    """Server currently has no players or no data in the requested section."""
+class RestrictedCommandError(PermissionDeniedError):
+    """The command exists but PRC restricts it from API execution."""
+
+
+class ProhibitedMessageError(BadRequestError):
+    """The API rejected command text because the message is prohibited."""
+
+
+class ServerOfflineError(APIError):
+    """The target private server is offline or has no players."""
+
+
+class ServerEmptyError(ServerOfflineError):
+    """Backward-compatible alias for server offline/no players."""
 
 
 class RobloxCommunicationError(APIError):
-    """PRC backend could not communicate with Roblox services."""
+    """PRC could not communicate with Roblox or the in-game module."""
 
 
-class InvalidCommandError(APIError):
-    """Command format/syntax was rejected."""
+class ModuleOutdatedError(APIError):
+    """The in-game private server module is out of date."""
+
+
+class PlayerNotFoundError(NotFoundError):
+    """The requested player was not found."""
 
 
 class ModelDecodeError(ERLCError):
-    """Raised when typed decoding fails due to top-level payload shape mismatch."""
+    """Typed model decoding failed because the payload shape was unexpected."""
 
-    def __init__(
-        self,
-        message: str,
-        *,
-        endpoint: str,
-        expected: str,
-        payload: Any,
-    ) -> None:
+    def __init__(self, message: str, *, endpoint: str, expected: str, payload: Any) -> None:
         super().__init__(
             message,
             method="DECODE",
             path=endpoint,
-            status=None,
             body=payload,
         )
         self.endpoint = endpoint
         self.expected = expected
+
+
+class CircuitOpenError(APIError):
+    """Removed in v2.0; retained only so old imports fail less abruptly."""
+

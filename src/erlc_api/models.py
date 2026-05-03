@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
 from typing import Any, Mapping
 
@@ -36,8 +36,21 @@ def _pick(raw: Mapping[str, Any], *keys: str) -> tuple[str | None, Any]:
     return None, None
 
 
+def _extra(raw: Mapping[str, Any], consumed: set[str]) -> dict[str, Any]:
+    return {key: value for key, value in raw.items() if key not in consumed}
+
+
+def _as_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        text = value.strip()
+        return text or None
+    return str(value)
+
+
 def _as_int(value: Any) -> int | None:
-    if isinstance(value, bool):
+    if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, int):
         return value
@@ -55,326 +68,337 @@ def _as_int(value: Any) -> int | None:
 
 
 def _as_float(value: Any) -> float | None:
-    if isinstance(value, bool):
+    if isinstance(value, bool) or value is None:
         return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
-        text = value.strip()
-        if not text:
-            return None
         try:
-            return float(text)
+            return float(value.strip())
         except ValueError:
             return None
     return None
 
 
-def _as_str(value: Any) -> str | None:
-    if isinstance(value, str):
-        text = value.strip()
-        return text or None
-    return None
-
-
-def _as_mapping(value: Any) -> Mapping[str, Any] | None:
-    if isinstance(value, Mapping):
+def _as_bool(value: Any) -> bool | None:
+    if isinstance(value, bool):
         return value
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text in {"true", "yes", "1"}:
+            return True
+        if text in {"false", "no", "0"}:
+            return False
     return None
 
 
-def _as_number_list(value: Any) -> list[float] | None:
+def _as_int_list(value: Any) -> list[int]:
     if not isinstance(value, list):
-        return None
-    out: list[float] = []
+        return []
+    out: list[int] = []
     for item in value:
-        number = _as_float(item)
-        if number is None:
-            continue
-        out.append(number)
+        parsed = _as_int(item)
+        if parsed is not None:
+            out.append(parsed)
     return out
 
 
-def _extra(raw: Mapping[str, Any], consumed: set[str]) -> dict[str, Any]:
-    return {k: v for k, v in raw.items() if k not in consumed}
+def _as_float_list(value: Any) -> list[float]:
+    if not isinstance(value, list):
+        return []
+    out: list[float] = []
+    for item in value:
+        parsed = _as_float(item)
+        if parsed is not None:
+            out.append(parsed)
+    return out
 
 
-def _parse_list_items(
-    payload: list[Any],
-    parser: Any,
-) -> list[Any]:
-    parsed: list[Any] = []
-    for item in payload:
-        if isinstance(item, Mapping):
-            parsed.append(parser(item))
-    return parsed
+def _as_str_int_map(value: Any) -> dict[int, str]:
+    if not isinstance(value, Mapping):
+        return {}
+    out: dict[int, str] = {}
+    for key, item in value.items():
+        parsed_key = _as_int(key)
+        parsed_value = _as_str(item)
+        if parsed_key is None or parsed_value is None:
+            continue
+        out[parsed_key] = parsed_value
+    return out
 
 
-def _epoch_to_datetime(value: int | None) -> datetime | None:
+def parse_player_identifier(value: Any) -> tuple[str | None, int | None]:
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return None, _as_int(value)
+    text = _as_str(value)
+    if text is None:
+        return None, _as_int(value)
+    if ":" not in text:
+        return text, None
+    name, raw_id = text.rsplit(":", 1)
+    parsed_id = _as_int(raw_id)
+    return (name.strip() or None), parsed_id
+
+
+def _timestamp_to_datetime(value: int | None) -> datetime | None:
     if value is None:
         return None
     return datetime.fromtimestamp(value, tz=timezone.utc)
 
 
-@dataclass(frozen=True)
-class CommandResponse:
-    success: bool | None
-    message: str | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+def _model_to_dict(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return {key: _model_to_dict(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_model_to_dict(item) for item in value]
+    if is_dataclass(value):
+        return {key: _model_to_dict(item) for key, item in asdict(value).items()}
+    return value
 
 
 @dataclass(frozen=True)
-class ServerInfo:
-    name: str | None
-    owner: str | None
-    co_owner: str | None
-    current_players: int | None
-    max_players: int | None
-    join_key: str | None
+class Model:
     raw: Mapping[str, Any] = field(default_factory=dict)
     extra: Mapping[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _model_to_dict(self)
 
 
 @dataclass(frozen=True)
-class PlayerLocation:
-    location_x: float | None
-    location_z: float | None
-    postal_code: str | None
-    street_name: str | None
-    building_number: str | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class PlayerLocation(Model):
+    location_x: float | None = None
+    location_z: float | None = None
+    postal_code: str | None = None
+    street_name: str | None = None
+    building_number: str | None = None
 
 
 @dataclass(frozen=True)
-class Player:
-    name: str | None
-    user_id: int | None
-    permission: str | None
-    team: str | None
-    callsign: str | None
-    location: Mapping[str, Any] | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class Player(Model):
+    player: str | None = None
+    name: str | None = None
+    user_id: int | None = None
+    permission: str | None = None
+    callsign: str | None = None
+    team: str | None = None
+    location: PlayerLocation | None = None
     wanted_stars: int | None = None
-    location_typed: PlayerLocation | None = None
+
+    @property
+    def location_typed(self) -> PlayerLocation | None:
+        return self.location
 
 
 @dataclass(frozen=True)
-class StaffMember:
-    name: str | None
-    callsign: str | None
-    permission: str | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class StaffMember(Model):
+    user_id: int | None = None
+    name: str | None = None
+    role: str | None = None
+
+    @property
+    def permission(self) -> str | None:
+        return self.role
+
+    @property
+    def callsign(self) -> str | None:
+        return None
 
 
 @dataclass(frozen=True)
-class QueueEntry:
-    player: str | None
-    position: int | None
-    timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class StaffList(Model):
+    co_owners: list[int] = field(default_factory=list)
+    admins: dict[int, str] = field(default_factory=dict)
+    mods: dict[int, str] = field(default_factory=dict)
+    helpers: dict[int, str] = field(default_factory=dict)
+
+    @property
+    def members(self) -> list[StaffMember]:
+        out = [StaffMember(user_id=user_id, name=None, role="CoOwner") for user_id in self.co_owners]
+        out.extend(StaffMember(user_id=user_id, name=name, role="Admin") for user_id, name in self.admins.items())
+        out.extend(StaffMember(user_id=user_id, name=name, role="Mod") for user_id, name in self.mods.items())
+        out.extend(StaffMember(user_id=user_id, name=name, role="Helper") for user_id, name in self.helpers.items())
+        return out
+
+
+@dataclass(frozen=True)
+class ServerInfo(Model):
+    name: str | None = None
+    owner_id: int | None = None
+    co_owner_ids: list[int] = field(default_factory=list)
+    current_players: int | None = None
+    max_players: int | None = None
+    join_key: str | None = None
+    acc_verified_req: str | None = None
+    team_balance: bool | None = None
+
+
+@dataclass(frozen=True)
+class JoinLogEntry(Model):
+    join: bool | None = None
+    timestamp: int | None = None
+    player: str | None = None
+    name: str | None = None
+    user_id: int | None = None
 
     @property
     def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
+        return _timestamp_to_datetime(self.timestamp)
 
 
 @dataclass(frozen=True)
-class JoinLogEntry:
-    player: str | None
-    timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class KillLogEntry(Model):
+    killed: str | None = None
+    killed_name: str | None = None
+    killed_id: int | None = None
+    killer: str | None = None
+    killer_name: str | None = None
+    killer_id: int | None = None
+    timestamp: int | None = None
+
+    @property
+    def victim(self) -> str | None:
+        return self.killed
+
+    @property
+    def weapon(self) -> str | None:
+        return None
 
     @property
     def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
+        return _timestamp_to_datetime(self.timestamp)
 
 
 @dataclass(frozen=True)
-class KillLogEntry:
-    killer: str | None
-    victim: str | None
-    weapon: str | None
-    timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class CommandLogEntry(Model):
+    player: str | None = None
+    name: str | None = None
+    user_id: int | None = None
+    timestamp: int | None = None
+    command: str | None = None
 
     @property
     def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
+        return _timestamp_to_datetime(self.timestamp)
 
 
 @dataclass(frozen=True)
-class CommandLogEntry:
-    player: str | None
-    command: str | None
-    timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class ModCallEntry(Model):
+    caller: str | None = None
+    caller_name: str | None = None
+    caller_id: int | None = None
+    moderator: str | None = None
+    moderator_name: str | None = None
+    moderator_id: int | None = None
+    timestamp: int | None = None
+
+    @property
+    def player(self) -> str | None:
+        return self.caller
+
+    @property
+    def reason(self) -> str | None:
+        return None
+
+    @property
+    def location(self) -> str | None:
+        return None
 
     @property
     def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
+        return _timestamp_to_datetime(self.timestamp)
 
 
 @dataclass(frozen=True)
-class ModCallEntry:
-    player: str | None
-    reason: str | None
-    location: str | None
-    timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class BanEntry(Model):
+    player_id: str = ""
+    player: str | None = None
+
+
+@dataclass(frozen=True)
+class BanList(Model):
+    bans: dict[str, str | None] = field(default_factory=dict)
 
     @property
-    def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
+    def entries(self) -> list[BanEntry]:
+        return [BanEntry(player_id=key, player=value, raw={key: value}) for key, value in self.bans.items()]
 
 
 @dataclass(frozen=True)
-class VehicleColor:
-    color_hex: str | None
-    color_name: str | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class Vehicle:
-    owner: str | None
-    model: str | None
-    color: str | None
-    plate: str | None
-    team: str | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class Vehicle(Model):
+    name: str | None = None
+    owner: str | None = None
+    texture: str | None = None
+    plate: str | None = None
     color_hex: str | None = None
     color_name: str | None = None
-    color_info: VehicleColor | None = None
+
+    @property
+    def model(self) -> str | None:
+        return self.name
+
+    @property
+    def color(self) -> str | None:
+        return self.color_name or self.color_hex
+
+    @property
+    def team(self) -> str | None:
+        return None
 
 
 @dataclass(frozen=True)
-class EmergencyCall:
-    team: str | None
-    caller: str | None
-    position: list[float] | None
-    started_at: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
+class VehicleColor(Model):
+    color_hex: str | None = None
+    color_name: str | None = None
+
+
+@dataclass(frozen=True)
+class EmergencyCall(Model):
+    team: str | None = None
+    caller: int | str | None = None
+    players: list[int] = field(default_factory=list)
+    position: list[float] = field(default_factory=list)
+    started_at: int | None = None
+    call_number: int | None = None
+    description: str | None = None
+    position_descriptor: str | None = None
 
     @property
     def started_at_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.started_at)
+        return _timestamp_to_datetime(self.started_at)
 
 
 @dataclass(frozen=True)
-class BanEntry:
-    player: str | None
-    reason: str | None
-    banned_by: str | None
-    timestamp: int | None
-    expires_timestamp: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
-
-    @property
-    def timestamp_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.timestamp)
-
-    @property
-    def expires_datetime(self) -> datetime | None:
-        return _epoch_to_datetime(self.expires_timestamp)
+class CommandResult(Model):
+    message: str | None = None
+    success: bool | None = None
 
 
 @dataclass(frozen=True)
-class V2ServerBundle:
-    players: list[Player] | None
-    staff: list[StaffMember] | None
-    join_logs: list[JoinLogEntry] | None
-    queue: list[QueueEntry] | None
-    kill_logs: list[KillLogEntry] | None
-    command_logs: list[CommandLogEntry] | None
-    mod_calls: list[ModCallEntry] | None
-    vehicles: list[Vehicle] | None
-    server_name: str | None
-    current_players: int | None
-    max_players: int | None
-    raw: Mapping[str, Any] = field(default_factory=dict)
-    extra: Mapping[str, Any] = field(default_factory=dict)
-    helpers: list[StaffMember] | None = None
+class ServerBundle(ServerInfo):
+    players: list[Player] | None = None
+    staff: StaffList | None = None
+    join_logs: list[JoinLogEntry] | None = None
+    queue: list[int] | None = None
+    kill_logs: list[KillLogEntry] | None = None
+    command_logs: list[CommandLogEntry] | None = None
+    mod_calls: list[ModCallEntry] | None = None
     emergency_calls: list[EmergencyCall] | None = None
+    vehicles: list[Vehicle] | None = None
+
+    @property
+    def server_name(self) -> str | None:
+        return self.name
+
+    @property
+    def helpers(self) -> list[StaffMember] | None:
+        if self.staff is None:
+            return None
+        return [member for member in self.staff.members if member.role == "Helper"]
 
 
-def _parse_command_response_item(raw: Mapping[str, Any]) -> CommandResponse:
+def _parse_location(raw: Mapping[str, Any]) -> PlayerLocation:
     consumed: set[str] = set()
-    key, success_value = _pick(raw, "Success", "success", "ok")
-    if key:
-        consumed.add(key)
-    key, message_value = _pick(raw, "Message", "message", "error")
-    if key:
-        consumed.add(key)
-
-    success: bool | None = success_value if isinstance(success_value, bool) else None
-    message = _as_str(message_value)
-
-    raw_dict = dict(raw)
-    return CommandResponse(
-        success=success,
-        message=message,
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-    )
-
-
-def _parse_server_info_item(raw: Mapping[str, Any]) -> ServerInfo:
-    consumed: set[str] = set()
-
-    key, name_value = _pick(raw, "Name", "ServerName", "name", "serverName")
-    if key:
-        consumed.add(key)
-    key, owner_value = _pick(raw, "Owner", "owner")
-    if key:
-        consumed.add(key)
-    key, co_owner_value = _pick(raw, "CoOwner", "Co-Owner", "coOwner", "co_owner")
-    if key:
-        consumed.add(key)
-    key, current_players_value = _pick(
-        raw,
-        "CurrentPlayers",
-        "Players",
-        "playerCount",
-        "current_players",
-    )
-    if key:
-        consumed.add(key)
-    key, max_players_value = _pick(raw, "MaxPlayers", "maxPlayers", "max_players")
-    if key:
-        consumed.add(key)
-    key, join_key_value = _pick(raw, "JoinKey", "joinKey", "join_key")
-    if key:
-        consumed.add(key)
-
-    raw_dict = dict(raw)
-    return ServerInfo(
-        name=_as_str(name_value),
-        owner=_as_str(owner_value),
-        co_owner=_as_str(co_owner_value),
-        current_players=_as_int(current_players_value),
-        max_players=_as_int(max_players_value),
-        join_key=_as_str(join_key_value),
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-    )
-
-
-def _parse_location_item(raw: Mapping[str, Any]) -> PlayerLocation:
-    consumed: set[str] = set()
-
     key, x_value = _pick(raw, "LocationX", "locationX", "x")
     if key:
         consumed.add(key)
@@ -390,7 +414,6 @@ def _parse_location_item(raw: Mapping[str, Any]) -> PlayerLocation:
     key, building_value = _pick(raw, "BuildingNumber", "buildingNumber", "building_number")
     if key:
         consumed.add(key)
-
     raw_dict = dict(raw)
     return PlayerLocation(
         location_x=_as_float(x_value),
@@ -403,22 +426,18 @@ def _parse_location_item(raw: Mapping[str, Any]) -> PlayerLocation:
     )
 
 
-def _parse_player_item(raw: Mapping[str, Any]) -> Player:
+def _parse_player(raw: Mapping[str, Any]) -> Player:
     consumed: set[str] = set()
-
-    key, name_value = _pick(raw, "Player", "Name", "Username", "player", "name", "username")
+    key, player_value = _pick(raw, "Player", "player", "Name", "name", "Username", "username")
     if key:
         consumed.add(key)
-    key, user_id_value = _pick(raw, "UserId", "PlayerId", "Id", "userId", "id")
-    if key:
-        consumed.add(key)
-    key, permission_value = _pick(raw, "Permission", "permission", "Rank", "rank")
-    if key:
-        consumed.add(key)
-    key, team_value = _pick(raw, "Team", "team")
+    key, permission_value = _pick(raw, "Permission", "permission")
     if key:
         consumed.add(key)
     key, callsign_value = _pick(raw, "Callsign", "callsign")
+    if key:
+        consumed.add(key)
+    key, team_value = _pick(raw, "Team", "team")
     if key:
         consumed.add(key)
     key, location_value = _pick(raw, "Location", "location")
@@ -428,420 +447,416 @@ def _parse_player_item(raw: Mapping[str, Any]) -> Player:
     if key:
         consumed.add(key)
 
-    location_mapping = _as_mapping(location_value)
-    location_typed = _parse_location_item(location_mapping) if location_mapping is not None else None
-
+    name, user_id = parse_player_identifier(player_value)
+    location = _parse_location(location_value) if isinstance(location_value, Mapping) else None
     raw_dict = dict(raw)
     return Player(
-        name=_as_str(name_value),
-        user_id=_as_int(user_id_value),
-        permission=_as_str(permission_value),
-        team=_as_str(team_value),
-        callsign=_as_str(callsign_value),
-        location=location_mapping,
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-        wanted_stars=_as_int(wanted_value),
-        location_typed=location_typed,
-    )
-
-
-def _parse_staff_item(raw: Mapping[str, Any]) -> StaffMember:
-    consumed: set[str] = set()
-    key, name_value = _pick(raw, "Player", "Name", "Username", "player", "name", "username")
-    if key:
-        consumed.add(key)
-    key, callsign_value = _pick(raw, "Callsign", "callsign")
-    if key:
-        consumed.add(key)
-    key, permission_value = _pick(raw, "Permission", "permission", "Rank", "rank")
-    if key:
-        consumed.add(key)
-
-    raw_dict = dict(raw)
-    return StaffMember(
-        name=_as_str(name_value),
-        callsign=_as_str(callsign_value),
-        permission=_as_str(permission_value),
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-    )
-
-
-def _parse_queue_item(raw: Mapping[str, Any]) -> QueueEntry:
-    consumed: set[str] = set()
-    key, player_value = _pick(raw, "Player", "player", "Name", "name")
-    if key:
-        consumed.add(key)
-    key, position_value = _pick(raw, "Position", "QueuePosition", "position")
-    if key:
-        consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp")
-    if key:
-        consumed.add(key)
-
-    raw_dict = dict(raw)
-    return QueueEntry(
         player=_as_str(player_value),
-        position=_as_int(position_value),
-        timestamp=_as_int(timestamp_value),
+        name=name,
+        user_id=user_id,
+        permission=_as_str(permission_value),
+        callsign=_as_str(callsign_value),
+        team=_as_str(team_value),
+        location=location,
+        wanted_stars=_as_int(wanted_value),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_join_log_item(raw: Mapping[str, Any]) -> JoinLogEntry:
+def _parse_staff(raw: Mapping[str, Any]) -> StaffList:
     consumed: set[str] = set()
-    key, player_value = _pick(raw, "Player", "player", "Name", "name")
+    key, co_owners = _pick(raw, "CoOwners", "coOwners", "co_owners")
     if key:
         consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp")
+    key, admins = _pick(raw, "Admins", "admins")
     if key:
         consumed.add(key)
+    key, mods = _pick(raw, "Mods", "mods")
+    if key:
+        consumed.add(key)
+    key, helpers = _pick(raw, "Helpers", "helpers")
+    if key:
+        consumed.add(key)
+    raw_dict = dict(raw)
+    return StaffList(
+        co_owners=_as_int_list(co_owners),
+        admins=_as_str_int_map(admins),
+        mods=_as_str_int_map(mods),
+        helpers=_as_str_int_map(helpers),
+        raw=raw_dict,
+        extra=_extra(raw_dict, consumed),
+    )
 
+
+def _parse_server_base(raw: Mapping[str, Any]) -> dict[str, Any]:
+    consumed: set[str] = set()
+    key, name = _pick(raw, "Name", "ServerName", "name", "serverName")
+    if key:
+        consumed.add(key)
+    key, owner_id = _pick(raw, "OwnerId", "ownerId", "owner_id")
+    if key:
+        consumed.add(key)
+    key, co_owner_ids = _pick(raw, "CoOwnerIds", "coOwnerIds", "co_owner_ids")
+    if key:
+        consumed.add(key)
+    key, current_players = _pick(raw, "CurrentPlayers", "currentPlayers", "current_players")
+    if key:
+        consumed.add(key)
+    key, max_players = _pick(raw, "MaxPlayers", "maxPlayers", "max_players")
+    if key:
+        consumed.add(key)
+    key, join_key = _pick(raw, "JoinKey", "joinKey", "join_key")
+    if key:
+        consumed.add(key)
+    key, acc_verified_req = _pick(raw, "AccVerifiedReq", "accVerifiedReq", "acc_verified_req")
+    if key:
+        consumed.add(key)
+    key, team_balance = _pick(raw, "TeamBalance", "teamBalance", "team_balance")
+    if key:
+        consumed.add(key)
+    return {
+        "name": _as_str(name),
+        "owner_id": _as_int(owner_id),
+        "co_owner_ids": _as_int_list(co_owner_ids),
+        "current_players": _as_int(current_players),
+        "max_players": _as_int(max_players),
+        "join_key": _as_str(join_key),
+        "acc_verified_req": _as_str(acc_verified_req),
+        "team_balance": _as_bool(team_balance),
+        "_consumed": consumed,
+    }
+
+
+def _parse_join_log(raw: Mapping[str, Any]) -> JoinLogEntry:
+    consumed: set[str] = set()
+    key, join = _pick(raw, "Join", "join")
+    if key:
+        consumed.add(key)
+    key, timestamp = _pick(raw, "Timestamp", "timestamp")
+    if key:
+        consumed.add(key)
+    key, player = _pick(raw, "Player", "player")
+    if key:
+        consumed.add(key)
+    name, user_id = parse_player_identifier(player)
     raw_dict = dict(raw)
     return JoinLogEntry(
-        player=_as_str(player_value),
-        timestamp=_as_int(timestamp_value),
+        join=_as_bool(join),
+        timestamp=_as_int(timestamp),
+        player=_as_str(player),
+        name=name,
+        user_id=user_id,
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_kill_log_item(raw: Mapping[str, Any]) -> KillLogEntry:
+def _parse_kill_log(raw: Mapping[str, Any]) -> KillLogEntry:
     consumed: set[str] = set()
-    key, killer_value = _pick(raw, "Killer", "killer")
+    key, killed = _pick(raw, "Killed", "killed", "Victim", "victim")
     if key:
         consumed.add(key)
-    key, victim_value = _pick(raw, "Victim", "victim")
+    key, killer = _pick(raw, "Killer", "killer")
     if key:
         consumed.add(key)
-    key, weapon_value = _pick(raw, "Weapon", "weapon")
+    key, timestamp = _pick(raw, "Timestamp", "timestamp")
     if key:
         consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp")
-    if key:
-        consumed.add(key)
-
+    killed_name, killed_id = parse_player_identifier(killed)
+    killer_name, killer_id = parse_player_identifier(killer)
     raw_dict = dict(raw)
     return KillLogEntry(
-        killer=_as_str(killer_value),
-        victim=_as_str(victim_value),
-        weapon=_as_str(weapon_value),
-        timestamp=_as_int(timestamp_value),
+        killed=_as_str(killed),
+        killed_name=killed_name,
+        killed_id=killed_id,
+        killer=_as_str(killer),
+        killer_name=killer_name,
+        killer_id=killer_id,
+        timestamp=_as_int(timestamp),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_command_log_item(raw: Mapping[str, Any]) -> CommandLogEntry:
+def _parse_command_log(raw: Mapping[str, Any]) -> CommandLogEntry:
     consumed: set[str] = set()
-    key, player_value = _pick(raw, "Player", "player", "Name", "name")
+    key, player = _pick(raw, "Player", "player")
     if key:
         consumed.add(key)
-    key, command_value = _pick(raw, "Command", "command")
+    key, timestamp = _pick(raw, "Timestamp", "timestamp")
     if key:
         consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp")
+    key, command = _pick(raw, "Command", "command")
     if key:
         consumed.add(key)
-
+    name, user_id = parse_player_identifier(player)
     raw_dict = dict(raw)
     return CommandLogEntry(
-        player=_as_str(player_value),
-        command=_as_str(command_value),
-        timestamp=_as_int(timestamp_value),
+        player=_as_str(player),
+        name=name,
+        user_id=user_id,
+        timestamp=_as_int(timestamp),
+        command=_as_str(command),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_mod_call_item(raw: Mapping[str, Any]) -> ModCallEntry:
+def _parse_mod_call(raw: Mapping[str, Any]) -> ModCallEntry:
     consumed: set[str] = set()
-    key, player_value = _pick(raw, "Player", "Caller", "player", "caller")
+    key, caller = _pick(raw, "Caller", "caller", "Player", "player")
     if key:
         consumed.add(key)
-    key, reason_value = _pick(raw, "Reason", "reason")
+    key, moderator = _pick(raw, "Moderator", "moderator")
     if key:
         consumed.add(key)
-    key, location_value = _pick(raw, "Location", "location")
+    key, timestamp = _pick(raw, "Timestamp", "timestamp")
     if key:
         consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp")
-    if key:
-        consumed.add(key)
-
+    caller_name, caller_id = parse_player_identifier(caller)
+    moderator_name, moderator_id = parse_player_identifier(moderator)
     raw_dict = dict(raw)
     return ModCallEntry(
-        player=_as_str(player_value),
-        reason=_as_str(reason_value),
-        location=_as_str(location_value),
-        timestamp=_as_int(timestamp_value),
+        caller=_as_str(caller),
+        caller_name=caller_name,
+        caller_id=caller_id,
+        moderator=_as_str(moderator),
+        moderator_name=moderator_name,
+        moderator_id=moderator_id,
+        timestamp=_as_int(timestamp),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_vehicle_color_item(raw: Mapping[str, Any]) -> VehicleColor:
+def _parse_vehicle(raw: Mapping[str, Any]) -> Vehicle:
     consumed: set[str] = set()
-    key, hex_value = _pick(raw, "ColorHex", "colorHex", "color_hex", "Hex", "hex")
+    key, name = _pick(raw, "Name", "name", "Vehicle", "vehicle", "Model", "model")
     if key:
         consumed.add(key)
-    key, name_value = _pick(raw, "ColorName", "colorName", "color_name", "Name", "name")
+    key, owner = _pick(raw, "Owner", "owner")
     if key:
         consumed.add(key)
-
-    raw_dict = dict(raw)
-    return VehicleColor(
-        color_hex=_as_str(hex_value),
-        color_name=_as_str(name_value),
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-    )
-
-
-def _parse_vehicle_item(raw: Mapping[str, Any]) -> Vehicle:
-    consumed: set[str] = set()
-    key, owner_value = _pick(raw, "Owner", "owner", "Player", "player")
+    key, texture = _pick(raw, "Texture", "texture")
     if key:
         consumed.add(key)
-    key, model_value = _pick(raw, "Model", "Vehicle", "model", "vehicle")
+    key, plate = _pick(raw, "Plate", "plate")
     if key:
         consumed.add(key)
-    key, color_value = _pick(raw, "Color", "Colour", "color", "colour")
+    key, color_hex = _pick(raw, "ColorHex", "colorHex", "color_hex")
     if key:
         consumed.add(key)
-    key, plate_value = _pick(raw, "Plate", "plate", "LicensePlate", "licensePlate")
+    key, color_name = _pick(raw, "ColorName", "colorName", "color_name")
     if key:
         consumed.add(key)
-    key, team_value = _pick(raw, "Team", "team")
-    if key:
-        consumed.add(key)
-
-    key, color_hex_value = _pick(raw, "ColorHex", "colorHex", "color_hex")
-    if key:
-        consumed.add(key)
-    key, color_name_value = _pick(raw, "ColorName", "colorName", "color_name")
-    if key:
-        consumed.add(key)
-
-    key, nested_color_value = _pick(raw, "ColorData", "ColorInfo", "ColorDetails", "colorData", "colorInfo")
-    if key:
-        consumed.add(key)
-
-    nested_color_mapping = _as_mapping(nested_color_value)
-    color_info = _parse_vehicle_color_item(nested_color_mapping) if nested_color_mapping is not None else None
-
     raw_dict = dict(raw)
     return Vehicle(
-        owner=_as_str(owner_value),
-        model=_as_str(model_value),
-        color=_as_str(color_value),
-        plate=_as_str(plate_value),
-        team=_as_str(team_value),
+        name=_as_str(name),
+        owner=_as_str(owner),
+        texture=_as_str(texture),
+        plate=_as_str(plate),
+        color_hex=_as_str(color_hex),
+        color_name=_as_str(color_name),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
-        color_hex=_as_str(color_hex_value),
-        color_name=_as_str(color_name_value),
-        color_info=color_info,
     )
 
 
-def _parse_emergency_call_item(raw: Mapping[str, Any]) -> EmergencyCall:
+def _parse_emergency_call(raw: Mapping[str, Any]) -> EmergencyCall:
     consumed: set[str] = set()
-    key, team_value = _pick(raw, "Team", "team")
+    key, team = _pick(raw, "Team", "team")
     if key:
         consumed.add(key)
-    key, caller_value = _pick(raw, "Caller", "caller", "Player", "player")
+    key, caller = _pick(raw, "Caller", "caller")
     if key:
         consumed.add(key)
-    key, position_value = _pick(raw, "Position", "position", "Positions", "positions")
+    key, players = _pick(raw, "Players", "players")
     if key:
         consumed.add(key)
-    key, started_value = _pick(raw, "StartedAt", "startedAt", "Timestamp", "timestamp")
+    key, position = _pick(raw, "Position", "position")
     if key:
         consumed.add(key)
-
+    key, started_at = _pick(raw, "StartedAt", "startedAt", "started_at", "Timestamp", "timestamp")
+    if key:
+        consumed.add(key)
+    key, call_number = _pick(raw, "CallNumber", "callNumber", "call_number")
+    if key:
+        consumed.add(key)
+    key, description = _pick(raw, "Description", "description")
+    if key:
+        consumed.add(key)
+    key, position_descriptor = _pick(raw, "PositionDescriptor", "positionDescriptor", "position_descriptor")
+    if key:
+        consumed.add(key)
     raw_dict = dict(raw)
+    parsed_caller = _as_int(caller)
     return EmergencyCall(
-        team=_as_str(team_value),
-        caller=_as_str(caller_value),
-        position=_as_number_list(position_value),
-        started_at=_as_int(started_value),
+        team=_as_str(team),
+        caller=parsed_caller if parsed_caller is not None else _as_str(caller),
+        players=_as_int_list(players),
+        position=_as_float_list(position),
+        started_at=_as_int(started_at),
+        call_number=_as_int(call_number),
+        description=_as_str(description),
+        position_descriptor=_as_str(position_descriptor),
         raw=raw_dict,
         extra=_extra(raw_dict, consumed),
     )
 
 
-def _parse_ban_item(raw: Mapping[str, Any]) -> BanEntry:
-    consumed: set[str] = set()
-    key, player_value = _pick(raw, "Player", "player", "Name", "name")
-    if key:
-        consumed.add(key)
-    key, reason_value = _pick(raw, "Reason", "reason")
-    if key:
-        consumed.add(key)
-    key, banned_by_value = _pick(raw, "BannedBy", "Moderator", "bannedBy", "moderator")
-    if key:
-        consumed.add(key)
-    key, timestamp_value = _pick(raw, "Timestamp", "timestamp", "IssuedAt", "issuedAt")
-    if key:
-        consumed.add(key)
-    key, expires_value = _pick(raw, "Expires", "ExpiresAt", "expires", "expiresAt")
-    if key:
-        consumed.add(key)
-
-    raw_dict = dict(raw)
-    return BanEntry(
-        player=_as_str(player_value),
-        reason=_as_str(reason_value),
-        banned_by=_as_str(banned_by_value),
-        timestamp=_as_int(timestamp_value),
-        expires_timestamp=_as_int(expires_value),
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-    )
-
-
-def decode_command_response(payload: Any, *, endpoint: str = "/v1/server/command") -> CommandResponse:
+def decode_server_info(payload: Any, *, endpoint: str = "/v2/server") -> ServerInfo:
     raw = _expect_mapping(payload, endpoint=endpoint)
-    return _parse_command_response_item(raw)
+    base = _parse_server_base(raw)
+    consumed = base.pop("_consumed")
+    return ServerInfo(raw=dict(raw), extra=_extra(raw, consumed), **base)
 
 
-def decode_server_info(payload: Any, *, endpoint: str = "/v1/server") -> ServerInfo:
+def decode_players(payload: Any, *, endpoint: str = "/v2/server?Players=true") -> list[Player]:
+    return [_parse_player(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
+
+
+def decode_staff(payload: Any, *, endpoint: str = "/v2/server?Staff=true") -> StaffList:
+    return _parse_staff(_expect_mapping(payload, endpoint=endpoint))
+
+
+def decode_queue(payload: Any, *, endpoint: str = "/v2/server?Queue=true") -> list[int]:
+    return _as_int_list(_expect_list(payload, endpoint=endpoint))
+
+
+def decode_join_logs(payload: Any, *, endpoint: str = "/v2/server?JoinLogs=true") -> list[JoinLogEntry]:
+    return [_parse_join_log(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
+
+
+def decode_kill_logs(payload: Any, *, endpoint: str = "/v2/server?KillLogs=true") -> list[KillLogEntry]:
+    return [_parse_kill_log(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
+
+
+def decode_command_logs(payload: Any, *, endpoint: str = "/v2/server?CommandLogs=true") -> list[CommandLogEntry]:
+    return [_parse_command_log(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
+
+
+def decode_mod_calls(payload: Any, *, endpoint: str = "/v2/server?ModCalls=true") -> list[ModCallEntry]:
+    return [_parse_mod_call(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
+
+
+def decode_bans(payload: Any, *, endpoint: str = "/v1/server/bans") -> BanList:
     raw = _expect_mapping(payload, endpoint=endpoint)
-    return _parse_server_info_item(raw)
+    return BanList(bans={str(key): _as_str(value) for key, value in raw.items()}, raw=dict(raw), extra={})
 
 
-def decode_players(payload: Any, *, endpoint: str = "/v1/server/players") -> list[Player]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_player_item)
+def decode_vehicles(payload: Any, *, endpoint: str = "/v2/server?Vehicles=true") -> list[Vehicle]:
+    return [_parse_vehicle(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
 
 
-def decode_staff(payload: Any, *, endpoint: str = "/v1/server/staff") -> list[StaffMember]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_staff_item)
+def decode_emergency_calls(payload: Any, *, endpoint: str = "/v2/server?EmergencyCalls=true") -> list[EmergencyCall]:
+    return [_parse_emergency_call(item) for item in _expect_list(payload, endpoint=endpoint) if isinstance(item, Mapping)]
 
 
-def decode_queue(payload: Any, *, endpoint: str = "/v1/server/queue") -> list[QueueEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_queue_item)
-
-
-def decode_join_logs(payload: Any, *, endpoint: str = "/v1/server/joinlogs") -> list[JoinLogEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_join_log_item)
-
-
-def decode_kill_logs(payload: Any, *, endpoint: str = "/v1/server/killlogs") -> list[KillLogEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_kill_log_item)
-
-
-def decode_command_logs(payload: Any, *, endpoint: str = "/v1/server/commandlogs") -> list[CommandLogEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_command_log_item)
-
-
-def decode_mod_calls(payload: Any, *, endpoint: str = "/v1/server/modcalls") -> list[ModCallEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_mod_call_item)
-
-
-def decode_vehicles(payload: Any, *, endpoint: str = "/v1/server/vehicles") -> list[Vehicle]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_vehicle_item)
-
-
-def decode_bans(payload: Any, *, endpoint: str = "/v1/server/bans") -> list[BanEntry]:
-    raw_list = _expect_list(payload, endpoint=endpoint)
-    return _parse_list_items(raw_list, _parse_ban_item)
-
-
-def _extract_list_field(raw: Mapping[str, Any], consumed: set[str], *aliases: str) -> list[Any] | None:
-    for alias in aliases:
-        if alias in raw:
-            consumed.add(alias)
-            value = raw.get(alias)
-            if isinstance(value, list):
-                return value
-            return None
-    return None
-
-
-def decode_v2_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> V2ServerBundle:
+def decode_command_result(payload: Any, *, endpoint: str = "/v2/server/command") -> CommandResult:
+    if payload is None or payload == "":
+        return CommandResult(message=None, success=None, raw={}, extra={})
     raw = _expect_mapping(payload, endpoint=endpoint)
     consumed: set[str] = set()
-
-    players_raw = _extract_list_field(raw, consumed, "Players", "players")
-    staff_raw = _extract_list_field(raw, consumed, "Staff", "staff")
-    helpers_raw = _extract_list_field(raw, consumed, "Helpers", "helpers")
-    join_logs_raw = _extract_list_field(raw, consumed, "JoinLogs", "join_logs", "joinLogs")
-    queue_raw = _extract_list_field(raw, consumed, "Queue", "queue")
-    kill_logs_raw = _extract_list_field(raw, consumed, "KillLogs", "kill_logs", "killLogs")
-    command_logs_raw = _extract_list_field(raw, consumed, "CommandLogs", "command_logs", "commandLogs")
-    mod_calls_raw = _extract_list_field(raw, consumed, "ModCalls", "mod_calls", "modCalls")
-    vehicles_raw = _extract_list_field(raw, consumed, "Vehicles", "vehicles")
-    emergency_calls_raw = _extract_list_field(raw, consumed, "EmergencyCalls", "emergencyCalls", "emergency_calls")
-
-    key, server_name_value = _pick(raw, "ServerName", "Name", "serverName", "name")
+    key, message = _pick(raw, "message", "Message")
     if key:
         consumed.add(key)
-    key, current_players_value = _pick(raw, "CurrentPlayers", "currentPlayers")
+    key, success = _pick(raw, "success", "Success", "ok")
     if key:
         consumed.add(key)
-    key, max_players_value = _pick(raw, "MaxPlayers", "maxPlayers")
-    if key:
-        consumed.add(key)
+    message_text = _as_str(message)
+    success_value = _as_bool(success)
+    if success_value is None and message_text is not None and message_text.lower() == "success":
+        success_value = True
+    return CommandResult(message=message_text, success=success_value, raw=dict(raw), extra=_extra(raw, consumed))
 
-    raw_dict = dict(raw)
-    return V2ServerBundle(
-        players=_parse_list_items(players_raw, _parse_player_item) if players_raw is not None else None,
-        staff=_parse_list_items(staff_raw, _parse_staff_item) if staff_raw is not None else None,
-        join_logs=_parse_list_items(join_logs_raw, _parse_join_log_item) if join_logs_raw is not None else None,
-        queue=_parse_list_items(queue_raw, _parse_queue_item) if queue_raw is not None else None,
-        kill_logs=_parse_list_items(kill_logs_raw, _parse_kill_log_item) if kill_logs_raw is not None else None,
-        command_logs=_parse_list_items(command_logs_raw, _parse_command_log_item) if command_logs_raw is not None else None,
-        mod_calls=_parse_list_items(mod_calls_raw, _parse_mod_call_item) if mod_calls_raw is not None else None,
-        vehicles=_parse_list_items(vehicles_raw, _parse_vehicle_item) if vehicles_raw is not None else None,
-        server_name=_as_str(server_name_value),
-        current_players=_as_int(current_players_value),
-        max_players=_as_int(max_players_value),
-        raw=raw_dict,
-        extra=_extra(raw_dict, consumed),
-        helpers=_parse_list_items(helpers_raw, _parse_staff_item) if helpers_raw is not None else None,
-        emergency_calls=_parse_list_items(emergency_calls_raw, _parse_emergency_call_item)
-        if emergency_calls_raw is not None
+
+def decode_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> ServerBundle:
+    raw = _expect_mapping(payload, endpoint=endpoint)
+    base = _parse_server_base(raw)
+    consumed: set[str] = set(base.pop("_consumed"))
+
+    def field_value(*keys: str) -> Any:
+        key, value = _pick(raw, *keys)
+        if key:
+            consumed.add(key)
+        return value
+
+    players_raw = field_value("Players", "players")
+    staff_raw = field_value("Staff", "staff")
+    join_logs_raw = field_value("JoinLogs", "joinLogs", "join_logs")
+    queue_raw = field_value("Queue", "queue")
+    kill_logs_raw = field_value("KillLogs", "killLogs", "kill_logs")
+    command_logs_raw = field_value("CommandLogs", "commandLogs", "command_logs")
+    mod_calls_raw = field_value("ModCalls", "modCalls", "mod_calls")
+    emergency_calls_raw = field_value("EmergencyCalls", "emergencyCalls", "emergency_calls")
+    vehicles_raw = field_value("Vehicles", "vehicles")
+
+    return ServerBundle(
+        **base,
+        players=decode_players(players_raw, endpoint=endpoint) if isinstance(players_raw, list) else None,
+        staff=decode_staff(staff_raw, endpoint=endpoint) if isinstance(staff_raw, Mapping) else None,
+        join_logs=decode_join_logs(join_logs_raw, endpoint=endpoint) if isinstance(join_logs_raw, list) else None,
+        queue=decode_queue(queue_raw, endpoint=endpoint) if isinstance(queue_raw, list) else None,
+        kill_logs=decode_kill_logs(kill_logs_raw, endpoint=endpoint) if isinstance(kill_logs_raw, list) else None,
+        command_logs=decode_command_logs(command_logs_raw, endpoint=endpoint)
+        if isinstance(command_logs_raw, list)
         else None,
+        mod_calls=decode_mod_calls(mod_calls_raw, endpoint=endpoint) if isinstance(mod_calls_raw, list) else None,
+        emergency_calls=decode_emergency_calls(emergency_calls_raw, endpoint=endpoint)
+        if isinstance(emergency_calls_raw, list)
+        else None,
+        vehicles=decode_vehicles(vehicles_raw, endpoint=endpoint) if isinstance(vehicles_raw, list) else None,
+        raw=dict(raw),
+        extra=_extra(raw, consumed),
     )
+
+
+CommandResponse = CommandResult
+V2ServerBundle = ServerBundle
+QueueEntry = int
+
+decode_v2_server_bundle = decode_server_bundle
 
 
 __all__ = [
     "BanEntry",
+    "BanList",
     "CommandLogEntry",
     "CommandResponse",
+    "CommandResult",
     "EmergencyCall",
     "JoinLogEntry",
     "KillLogEntry",
     "ModCallEntry",
+    "Model",
     "Player",
     "PlayerLocation",
     "QueueEntry",
+    "ServerBundle",
     "ServerInfo",
+    "StaffList",
     "StaffMember",
     "V2ServerBundle",
     "Vehicle",
     "VehicleColor",
     "decode_bans",
     "decode_command_logs",
+    "decode_command_result",
     "decode_command_response",
+    "decode_emergency_calls",
     "decode_join_logs",
     "decode_kill_logs",
     "decode_mod_calls",
     "decode_players",
     "decode_queue",
+    "decode_server_bundle",
     "decode_server_info",
     "decode_staff",
     "decode_v2_server_bundle",
     "decode_vehicles",
+    "parse_player_identifier",
 ]
+
+
+decode_command_response = decode_command_result

@@ -1,44 +1,53 @@
 # erlc-api Wiki
 
-This wiki is the practical playbook for shipping ER:LC bot/backend integrations with `erlc-api`.
-
-Current implemented strengths:
-
-- async-first client architecture
-- multi-server context routing from one client
-- bucket-aware rate limiting with reset-aware pre-acquire
-- configurable retry + backoff jitter
-- request coalescing for duplicate idempotent GET calls
-- TTL cache with manual invalidation and cache stats
-- optional per-bucket circuit breaker
-- raw + typed + validated v2 response modes
-- command dry-run/tracking + log stream helpers
-- live server tracker callbacks (string + `TrackerEvent` enum names)
-- event webhook verification + custom command routing helpers
-- metrics sink hooks including command-level emission
+`erlc-api` v2.0 is a lightweight sync and async wrapper for the ER:LC PRC API.
+It uses flat clients, typed dataclasses by default, raw JSON escape hatches,
+flexible commands, and explicit utility modules.
 
 ## Start Here
 
-- [Getting-Started.md](./Getting-Started.md)
-- [Quickstart-Discord.py.md](./Quickstart-Discord.py.md)
-- [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md)
-- [Function-List.md](./Function-List.md)
-- [Event-Webhooks-and-Custom-Commands.md](./Event-Webhooks-and-Custom-Commands.md)
-- [Endpoint-Usage-Cookbook.md](./Endpoint-Usage-Cookbook.md)
-- [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md)
-- [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md)
-- [Error-Handling-and-Troubleshooting.md](./Error-Handling-and-Troubleshooting.md)
-- [FAQ.md](./FAQ.md)
-- [Comparison-and-Why-erlc-api.md](./Comparison-and-Why-erlc-api.md)
+1. [Getting Started](./Getting-Started.md)
+2. [Clients and Authentication](./Clients-and-Authentication.md)
+3. [Endpoint Reference](./Endpoint-Reference.md)
+4. [Commands Reference](./Commands-Reference.md)
+5. [Utilities Reference](./Utilities-Reference.md)
 
-## Recommended Path
+## API Reference
 
-1. Initialize client + context in [Getting-Started.md](./Getting-Started.md).
-2. Build primary integration from [Quickstart-Discord.py.md](./Quickstart-Discord.py.md) or [Quickstart-Web-Backend.md](./Quickstart-Web-Backend.md).
-3. Choose raw/typed/validated mode in [Typed-vs-Raw-Responses.md](./Typed-vs-Raw-Responses.md).
-4. Harden reliability from [Rate-Limits-Retries-and-Reliability.md](./Rate-Limits-Retries-and-Reliability.md) and [Error-Handling-and-Troubleshooting.md](./Error-Handling-and-Troubleshooting.md).
+- [Clients and Authentication](./Clients-and-Authentication.md): constructors,
+  lifecycle, headers, `server_key=`, `global_key=`, validation, and raw requests.
+- [Endpoint Reference](./Endpoint-Reference.md): every flat endpoint method,
+  PRC path, return type, options, examples, and common mistakes.
+- [Models Reference](./Models-Reference.md): dataclass fields, helpers, `.raw`,
+  `.extra`, `.to_dict()`, and player identifier parsing.
+- [Commands Reference](./Commands-Reference.md): plain strings, `cmd`, dry-run,
+  normalization, validation, and command error behavior.
+- [Errors and Rate Limits](./Errors-and-Rate-Limits.md): exception mapping,
+  `RateLimitError`, retry behavior, and validation statuses.
 
-## External Docs
+## Utilities
 
-- Project README: [README.md](https://github.com/Fortune1243/erlc-api/blob/main/README.md)
-- Full comparison matrix: [comparision.md](https://github.com/Fortune1243/erlc-api/blob/main/comparision.md)
+Utilities are explicit imports, for example:
+
+```python
+from erlc_api.find import Finder
+from erlc_api.wait import AsyncWaiter
+from erlc_api.export import Exporter
+```
+
+See:
+
+- [Utilities Reference](./Utilities-Reference.md)
+- [Waiters and Watchers](./Waiters-and-Watchers.md)
+- [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md)
+- [Moderation Helpers](./Moderation-Helpers.md)
+
+## Operations
+
+- [Webhooks Reference](./Webhooks-Reference.md)
+- [Quickstart: Discord.py](./Quickstart-Discord.py.md)
+- [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
+
+## Migration
+
+Start with [Migration to v2](./Migration-to-v2.md) if you have older code.

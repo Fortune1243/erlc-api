@@ -18,7 +18,7 @@ pip install -e .[webhooks]
 
 ```python
 from fastapi import FastAPI, HTTPException, Request
-from erlc_api import (
+from erlc_api.webhooks import (
     EventWebhookRouter,
     WebhookEventType,
     assert_valid_event_webhook_signature,
@@ -40,13 +40,13 @@ async def handle_warn(command, event):
     return {"ok": True, "target": command.args[0], "reason": " ".join(command.args[1:])}
 
 
-@router.on_emergency_call
+@router.on_emergency_call()
 def handle_emergency(event):
     data = event.emergency_call or {}
     return {"team": data.get("Team"), "caller": data.get("Caller")}
 
 
-@router.on_unknown
+@router.on_unknown()
 def handle_unknown(event):
     return {"ok": False, "event_type": event.event_type}
 

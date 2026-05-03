@@ -1,73 +1,79 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 
-def validate_command_syntax(command: str) -> None:
+def normalize_command(command: str | Command) -> str:
+    """Return a PRC command string, accepting either `:cmd ...` or `cmd ...`."""
+    if isinstance(command, Command):
+        command = command.text
     if not isinstance(command, str):
-        raise TypeError("command must be a string.")
-    stripped = command.strip()
-    if not stripped:
+        raise TypeError("command must be a string or Command.")
+
+    text = command.strip()
+    if not text:
         raise ValueError("command cannot be empty.")
-    if "\n" in stripped or "\r" in stripped:
+    if "\n" in text or "\r" in text:
         raise ValueError("command cannot contain newline characters.")
-    if not stripped.startswith(":"):
-        raise ValueError("command must start with ':'.")
-    parts = stripped.split(maxsplit=1)
-    command_name = parts[0][1:]
-    if not command_name:
+    if not text.startswith(":"):
+        text = f":{text}"
+
+    name = text[1:].split(maxsplit=1)[0].strip()
+    if not name:
         raise ValueError("command name cannot be empty.")
+    return text
+
+
+def validate_command(command: str | Command) -> None:
+    normalize_command(command)
 
 
 @dataclass(frozen=True)
-class BuiltCommand:
+class Command:
+    """Small immutable command value accepted by `ERLC.command`."""
+
     text: str
 
     def __post_init__(self) -> None:
-        validate_command_syntax(self.text)
+        object.__setattr__(self, "text", normalize_command(self.text))
 
     def __str__(self) -> str:
         return self.text
 
 
-def _require_value(name: str, value: str) -> str:
-    text = value.strip()
+def _stringify_part(value: Any) -> str:
+    text = str(value).strip()
     if not text:
-        raise ValueError(f"{name} cannot be blank.")
+        raise ValueError("command parts cannot be blank.")
     return text
 
 
-class CommandBuilder:
-    @staticmethod
-    def raw(command: str) -> BuiltCommand:
-        return BuiltCommand(command.strip())
+class CommandFactory:
+    """Flexible command builder: `cmd.pm("Avi", "hi")` or `cmd("pm", "Avi", "hi")`."""
 
-    @staticmethod
-    def pm(*, target: str, message: str) -> BuiltCommand:
-        target_value = _require_value("target", target)
-        message_value = _require_value("message", message)
-        return BuiltCommand(f":pm {target_value} {message_value}")
+    def __call__(self, name: str, *parts: Any) -> Command:
+        bits = [_stringify_part(name), *[_stringify_part(part) for part in parts]]
+        return Command(" ".join(bits))
 
-    @staticmethod
-    def rank(*, target: str, rank: str) -> BuiltCommand:
-        target_value = _require_value("target", target)
-        rank_value = _require_value("rank", rank)
-        return BuiltCommand(f":rank {target_value} {rank_value}")
+    def raw(self, command: str) -> Command:
+        return Command(command)
 
-    @staticmethod
-    def warn(*, target: str, reason: str) -> BuiltCommand:
-        target_value = _require_value("target", target)
-        reason_value = _require_value("reason", reason)
-        return BuiltCommand(f":warn {target_value} {reason_value}")
+    def __getattr__(self, name: str):
+        if name.startswith("_"):
+            raise AttributeError(name)
 
-    @staticmethod
-    def ban(*, target: str, reason: str, duration: str | None = None) -> BuiltCommand:
-        target_value = _require_value("target", target)
-        reason_value = _require_value("reason", reason)
-        if duration is None:
-            return BuiltCommand(f":ban {target_value} {reason_value}")
-        duration_value = _require_value("duration", duration)
-        return BuiltCommand(f":ban {target_value} {duration_value} {reason_value}")
+        def build(*parts: Any) -> Command:
+            return self(name, *parts)
+
+        return build
+
+
+cmd = CommandFactory()
+
+
+BuiltCommand = Command
+validate_command_syntax = validate_command
 
 
 def infer_command_success(*, success: bool | None, message: str | None) -> bool | None:
@@ -75,19 +81,21 @@ def infer_command_success(*, success: bool | None, message: str | None) -> bool 
         return success
     if not message:
         return None
-    text = message.lower()
-    failure_terms = ("invalid", "failed", "error", "denied", "not found", "unable")
-    if any(term in text for term in failure_terms):
+    lowered = message.lower()
+    if any(term in lowered for term in ("invalid", "failed", "error", "denied", "not found", "unable")):
         return False
-    success_terms = ("success", "sent", "executed", "completed", "ranked", "warned", "banned", "done")
-    if any(term in text for term in success_terms):
+    if any(term in lowered for term in ("success", "sent", "executed", "completed", "done")):
         return True
     return None
 
 
 __all__ = [
     "BuiltCommand",
-    "CommandBuilder",
+    "Command",
+    "CommandFactory",
+    "cmd",
     "infer_command_success",
+    "normalize_command",
+    "validate_command",
     "validate_command_syntax",
 ]

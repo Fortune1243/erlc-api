@@ -9,7 +9,7 @@ Usage (PowerShell):
 import asyncio
 import os
 
-from erlc_api import ERLCClient
+from erlc_api import AsyncERLC
 
 
 ENV_KEY = "ERLC_SERVER_KEY"
@@ -20,15 +20,11 @@ async def main() -> None:
     if not key:
         raise SystemExit(f"Missing required environment variable: {ENV_KEY}")
 
-    client = ERLCClient()
-    try:
-        await client.start()
-        ctx = client.ctx(key)
-        print("validate_key:", await client.validate_key(ctx))
-        print("server:", await client.v1.server(ctx))
-    finally:
-        await client.close()
+    async with AsyncERLC(key) as api:
+        print("validate_key:", await api.validate_key())
+        print("server:", await api.server(raw=True))
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+

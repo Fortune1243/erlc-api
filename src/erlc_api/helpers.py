@@ -1,11 +1,9 @@
-# src/erlc_api/helpers.py
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
-from .client import ERLCClient, ValidationResult
-from .context import ERLCContext
+from .client import AsyncERLC, ValidationResult
 
 
 @dataclass(frozen=True)
@@ -18,34 +16,23 @@ class ParsedLogCommand:
 
 
 def _parse_log_command(entry: Mapping[str, Any]) -> ParsedLogCommand | None:
-    raw_command = entry.get("Command")
+    raw_command = entry.get("Command") or entry.get("command")
     if not isinstance(raw_command, str):
         return None
-
     stripped = raw_command.lstrip()
     lowered = stripped.lower()
     if not lowered.startswith(":log"):
         return None
-    if len(stripped) == 4:
+    if len(stripped) == 4 or not stripped[4].isspace():
         return None
-    if not stripped[4].isspace():
-        return None
-
     payload = stripped[5:].strip()
     if not payload:
         return None
-
-    player = entry.get("Player")
-    if not isinstance(player, str):
-        player = None
-
-    timestamp = entry.get("Timestamp")
-    if not isinstance(timestamp, int):
-        timestamp = None
-
+    player = entry.get("Player") or entry.get("player")
+    timestamp = entry.get("Timestamp") or entry.get("timestamp")
     return ParsedLogCommand(
-        player=player,
-        timestamp=timestamp,
+        player=player if isinstance(player, str) else None,
+        timestamp=timestamp if isinstance(timestamp, int) else None,
         payload=payload,
         raw_command=raw_command,
         raw_entry=entry,
@@ -69,18 +56,18 @@ def extract_log_commands(
 
 
 async def fetch_log_commands(
-    client: ERLCClient,
-    ctx: ERLCContext,
+    client: AsyncERLC,
     *,
+    server_key: str | None = None,
     payload_prefix: str | None = None,
 ) -> list[ParsedLogCommand]:
-    entries = await client.v1.command_logs(ctx)
+    entries = await client.command_logs(server_key=server_key, raw=True)
     if not isinstance(entries, list):
         return []
-    filtered_entries = [entry for entry in entries if isinstance(entry, Mapping)]
-    return extract_log_commands(filtered_entries, payload_prefix=payload_prefix)
+    filtered = [entry for entry in entries if isinstance(entry, Mapping)]
+    return extract_log_commands(filtered, payload_prefix=payload_prefix)
 
 
-async def validate_server_key(client: ERLCClient, ctx: ERLCContext) -> ValidationResult:
-    """Backward-compatible helper that delegates to ERLCClient.validate_key."""
-    return await client.validate_key(ctx)
+async def validate_server_key(client: AsyncERLC, *, server_key: str | None = None) -> ValidationResult:
+    return await client.validate_key(server_key=server_key)
+
