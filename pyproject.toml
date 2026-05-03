@@ -8,7 +8,43 @@ version = "2.0.0"
 description = "Lightweight sync and async Python wrapper for the ER:LC PRC API"
 readme = "README.md"
 requires-python = ">=3.11"
+license = "LicenseRef-ERLC-API-Wrapper-Attribution-License-1.0"
+license-files = ["LICENSE"]
+authors = [
+  {name = "Avi Sehrawat"}
+]
+maintainers = [
+  {name = "Avi Sehrawat"}
+]
+keywords = [
+  "erlc",
+  "er:lc",
+  "prc",
+  "prc-api",
+  "roblox",
+  "api-wrapper",
+  "async",
+  "sync",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3 :: Only",
+  "Typing :: Typed",
+]
 dependencies = ["httpx>=0.27.0"]
+
+[project.urls]
+Homepage = "https://github.com/Fortune1243/erlc-api"
+Repository = "https://github.com/Fortune1243/erlc-api"
+Issues = "https://github.com/Fortune1243/erlc-api/issues"
+Documentation = "https://github.com/Fortune1243/erlc-api/wiki"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
