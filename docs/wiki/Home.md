@@ -2,7 +2,8 @@
 
 `erlc-api.py` v2 is a lightweight sync and async wrapper for the ER:LC PRC API.
 It uses flat clients, typed dataclasses by default, raw JSON escape hatches,
-flexible commands, and explicit lazy utility modules.
+flexible commands, default-on process-local rate limiting, command policy
+guardrails, and explicit lazy utility modules.
 
 ## Recommended Reading Path
 
@@ -81,14 +82,14 @@ flexible commands, and explicit lazy utility modules.
 
 - [Migration to v2](./Migration-to-v2.md): breaking changes and migration
   checklist.
-- [Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md): design goals
+- [Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md): design goals
   and why the wrapper stays lightweight.
 
 ## Related Pages
 
-- [Earlier in the guide: Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md)
+- [Earlier in the guide: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
 - [Next in the guide: Installation and Extras](./Installation-and-Extras.md)
 
 ---
 
-[Previous Page: Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md) | [Next Page: Installation and Extras](./Installation-and-Extras.md)
+[Previous Page: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md) | [Next Page: Installation and Extras](./Installation-and-Extras.md)

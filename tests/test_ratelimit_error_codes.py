@@ -136,11 +136,19 @@ def test_rate_limited_false_preserves_no_limiter_behavior() -> None:
     fake = _SyncFake([_json_response({"Players": []}, headers={"X-RateLimit-Bucket": "global", "X-RateLimit-Remaining": "0"})])
     transport = SyncTransport(ClientSettings(retry_429=False))
     transport._client = fake  # type: ignore[assignment]
-    api = ERLC("key", transport=transport)
+    api = ERLC("key", rate_limited=False, transport=transport)
 
     assert api.rate_limits is None
     assert api.players() == []
     assert api.rate_limits is None
+
+
+def test_rate_limiter_is_default_on() -> None:
+    transport = SyncTransport(ClientSettings(retry_429=False))
+    api = ERLC("key", transport=transport)
+
+    assert api.rate_limited is True
+    assert api.rate_limits is not None
 
 
 def test_rate_limiter_missing_headers_do_not_block() -> None:

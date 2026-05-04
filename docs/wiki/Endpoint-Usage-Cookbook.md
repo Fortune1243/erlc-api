@@ -117,11 +117,13 @@ Return type: `list[int]`.
 ## Send Commands
 
 ```python
-from erlc_api import cmd
+from erlc_api import CommandPolicy, cmd
 
-await api.command("h hello")
-await api.command(cmd.pm("Player", "hello"))
-await api.command(cmd("warn", "Player", "RDM"))
+policy = CommandPolicy(allowed={"h", "pm", "warn"}, max_length=120)
+
+await api.command(policy.validate("h hello"))
+await api.command(policy.validate(cmd.pm("Player", "hello")))
+await api.command(policy.validate(cmd("warn", "Player", "RDM")))
 ```
 
 Use `dry_run=True` for previews:

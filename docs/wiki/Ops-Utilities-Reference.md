@@ -108,7 +108,7 @@ Purpose: track PRC rate-limit headers in memory and wait before avoidable
 requests. Most users should enable it through the client:
 
 ```python
-api = AsyncERLC("server-key", rate_limited=True)
+api = AsyncERLC("server-key")
 await api.players()
 print(api.rate_limits.to_dict())
 ```
@@ -158,7 +158,7 @@ custom command router.
 ## Common Mistakes
 
 - Treating `safe_interval()` as an official PRC limit.
-- Expecting `rate_limited=True` to coordinate across multiple processes.
+- Expecting the process-local rate limiter to coordinate across multiple processes.
 - Treating error-code advice as a replacement for catching typed exceptions.
 - Using in-memory dedupe when duplicate protection must survive restarts.
 - Logging secrets inside audit metadata.

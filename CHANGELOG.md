@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.3.1 - 2026-05-04
+
+- Made dynamic client rate limiting default-on for `AsyncERLC` and `ERLC`.
+- Kept `rate_limited=False` as an explicit opt-out for applications with their own limiter.
+- Standardized user-facing package naming around `erlc-api.py`.
+- Added top-level `__version__`.
+- Added `CommandPolicy`, `CommandPolicyResult`, and `CommandPolicyError` for allowlist-first command guardrails.
+- Added lazy `erlc_api.security.key_fingerprint(...)` for safe key diagnostics.
+- Clarified `raw=True` behavior for full endpoint payloads versus section helper payloads.
+- Reworked Discord and web command examples around lifecycle, permissions/auth, cooldowns, policy validation, and dry-run previews.
+- Added known limitations and endpoint/support matrix documentation.
+- Added a regression test that documented extras resolve to `pyproject.toml` optional dependencies.
+
 ## 2.3.0 - 2026-05-04
 
 - Added lazy workflow utility modules: `location`, `bundle`, `rules`, `multiserver`, `discord_tools`, `diagnostics`, `cache`, `status`, and `command_flows`.

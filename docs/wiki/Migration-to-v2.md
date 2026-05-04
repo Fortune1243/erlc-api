@@ -230,8 +230,8 @@ payload = await api.players(raw=True)
 ## Related Pages
 
 - [Earlier in the guide: Testing and Mocking](./Testing-and-Mocking.md)
-- [Next in the guide: Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md)
+- [Next in the guide: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
 
 ---
 
-[Previous Page: Testing and Mocking](./Testing-and-Mocking.md) | [Next Page: Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md)
+[Previous Page: Testing and Mocking](./Testing-and-Mocking.md) | [Next Page: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)

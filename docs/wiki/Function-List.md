@@ -2,8 +2,8 @@
 
 ## Clients
 
-- `AsyncERLC(server_key=None, global_key=None, rate_limited=False)`
-- `ERLC(server_key=None, global_key=None, rate_limited=False)`
+- `AsyncERLC(server_key=None, global_key=None, rate_limited=True)`
+- `ERLC(server_key=None, global_key=None, rate_limited=True)`
 - `start()` / `close()`
 - async and sync context-manager support
 - `validate_key()` / `health_check()`
@@ -32,6 +32,14 @@ All methods accept `server_key=` and `raw=True`.
 - `cmd.pm("Player", "message")`
 - `cmd("pm", "Player", "message")`
 - plain strings such as `"h hello"` or `":h hello"`
+- `CommandPolicy(allowed={"h", "pm"}, max_length=120)`
+- `CommandPolicy.check(command)` / `CommandPolicy.validate(command)`
+- `CommandPolicyResult`
+- `CommandPolicyError`
+
+## Security
+
+- `from erlc_api.security import key_fingerprint`
 
 ## Utilities
 

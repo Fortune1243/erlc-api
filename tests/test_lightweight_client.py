@@ -132,6 +132,23 @@ async def test_async_flat_methods_support_raw_and_server_key_override() -> None:
 
 
 @pytest.mark.asyncio
+async def test_raw_mode_shapes_are_explicit() -> None:
+    command_payload = {"message": "Success", "extra": {"id": "abc"}}
+    fake = _AsyncFake([_json_response(SERVER_PAYLOAD), _json_response(SERVER_PAYLOAD), _json_response(command_payload)])
+    transport = AsyncTransport(ClientSettings(retry_429=False))
+    transport._client = fake  # type: ignore[assignment]
+    api = AsyncERLC("default-key", transport=transport)
+
+    server_payload = await api.server(players=True, raw=True)
+    players_payload = await api.players(raw=True)
+    command_result = await api.command("h hi", raw=True)
+
+    assert server_payload == SERVER_PAYLOAD
+    assert players_payload == SERVER_PAYLOAD["Players"]
+    assert command_result == command_payload
+
+
+@pytest.mark.asyncio
 async def test_async_command_uses_v2_and_flexible_builder() -> None:
     fake = _AsyncFake([_json_response({"message": "Success"})])
     transport = AsyncTransport(ClientSettings(retry_429=False))

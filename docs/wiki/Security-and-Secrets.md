@@ -60,6 +60,38 @@ except Exception as exc:
 Wrapper exceptions expose short body excerpts and request metadata without
 requiring secret headers.
 
+When you need to correlate logs with a configured key, log a fingerprint instead
+of the key:
+
+```python
+from erlc_api.security import key_fingerprint
+
+logger.info("Configured ERLC server key %s", key_fingerprint(server_key))
+```
+
+Fingerprints are one-way hash prefixes. They are useful for diagnostics, but
+they are not proof that a key is valid.
+
+## Setup Validation
+
+Validate keys during setup or bot startup before enabling command routes:
+
+```python
+from erlc_api import AsyncERLC, ValidationStatus
+
+api = AsyncERLC(server_key)
+
+async with api:
+    result = await api.validate_key()
+    if result.status is not ValidationStatus.OK:
+        raise RuntimeError(f"ERLC key validation failed: {result.status}")
+```
+
+If a key repeatedly returns auth failures, stop using that configured server,
+disable command routes for it, and ask an operator to rotate or re-enter the key.
+If your bot leaves or is removed from a Discord guild, remove that guild's stored
+server key from your own storage.
+
 ## Webhook Verification
 
 Verify the raw request body before trusting JSON:
@@ -93,8 +125,14 @@ Discord role policies. Put application-level checks in your bot, web route,
 middleware, or custom command predicate.
 
 ```python
+from erlc_api import CommandPolicy
+
+announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
+
+
 @router.command("announce", predicate=lambda _invocation, ctx: ctx.arg(0) is not None)
 async def announce(ctx):
+    command_text = announce_policy.validate(f"h {ctx.rest()}")
     ...
 ```
 

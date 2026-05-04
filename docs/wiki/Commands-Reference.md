@@ -1,6 +1,6 @@
 # Commands Reference
 
-`erlc-api` v2 uses flexible command syntax. You can pass plain strings, immutable
+`erlc-api.py` v2 uses flexible command syntax. You can pass plain strings, immutable
 `Command` values, or the `cmd` factory.
 
 ## `normalize_command`
@@ -130,6 +130,61 @@ Common mistakes:
 - Passing player/message parts that contain leading/trailing whitespace and
   expecting it to be preserved. Parts are stripped.
 
+## `CommandPolicy`
+
+Signature:
+
+```python
+CommandPolicy(
+    *,
+    allowed: Iterable[str] | str | None = None,
+    blocked: Iterable[str] | str | None = None,
+    max_length: int | None = 120,
+    case_sensitive: bool = False,
+)
+```
+
+Purpose: add a local allowlist-first safety layer before a bot, web route, or
+custom-command handler calls `api.command(...)`.
+
+Return types:
+
+| Method | Return type | Purpose |
+| --- | --- | --- |
+| `check(command)` | `CommandPolicyResult` | Inspect whether a command would be allowed. |
+| `validate(command)` | `str` | Return normalized command text or raise `CommandPolicyError`. |
+
+Minimal example:
+
+```python
+from erlc_api import CommandPolicy, CommandPolicyError, cmd
+
+policy = CommandPolicy(allowed={"h", "pm"}, max_length=120)
+
+try:
+    command_text = policy.validate(cmd.h("Short staff announcement"))
+except CommandPolicyError as exc:
+    print(exc.result.reason)
+else:
+    await api.command(command_text)
+```
+
+Important behavior:
+
+- `CommandPolicy()` blocks everything until `allowed=` is configured.
+- `blocked=` wins even if the same command appears in `allowed=`.
+- `max_length` counts the normalized command including the leading `:`.
+- The policy does not call PRC and does not invent Discord roles or PRC
+  permissions.
+
+Common mistakes:
+
+- Calling `api.command(...)` with the original user input after validating a
+  different command. Execute the normalized string returned by `validate()`.
+- Treating `check()` as enforcement without checking `result.allowed`.
+- Using policy as a replacement for Discord permissions, web auth, or audit
+  logging.
+
 ## `api.command`
 
 Async signature:
@@ -163,20 +218,22 @@ Return type: `CommandResult` by default, raw payload with `raw=True`.
 Minimal async example:
 
 ```python
-from erlc_api import AsyncERLC, cmd
+from erlc_api import AsyncERLC, CommandPolicy, cmd
 
 async with AsyncERLC("server-key") as api:
-    result = await api.command(cmd.pm("Avi", "hello"))
+    policy = CommandPolicy(allowed={"pm"}, max_length=120)
+    result = await api.command(policy.validate(cmd.pm("Avi", "hello")))
     print(result.message)
 ```
 
 Minimal sync example:
 
 ```python
-from erlc_api import ERLC
+from erlc_api import ERLC, CommandPolicy
 
 with ERLC("server-key") as api:
-    print(api.command("h hello").message)
+    policy = CommandPolicy(allowed={"h"}, max_length=120)
+    print(api.command(policy.validate("h hello")).message)
 ```
 
 Important options:

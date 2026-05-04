@@ -1,6 +1,6 @@
 # Clients and Authentication
 
-`erlc-api` v2 exposes two public clients:
+`erlc-api.py` v2 exposes two public clients:
 
 - `AsyncERLC` for async apps, bots, web backends, and workers.
 - `ERLC` for sync scripts and command-line tools.
@@ -20,7 +20,7 @@ AsyncERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
-    rate_limited: bool = False,
+    rate_limited: bool = True,
     user_agent: str | None = None,
 )
 ```
@@ -48,7 +48,7 @@ Important options:
 | `base_url` | Override API base URL for tests or custom gateways. |
 | `timeout_s` | HTTP timeout in seconds. |
 | `retry_429` | Sleep once and retry once on rate limits when retry timing is available. |
-| `rate_limited` | Opt in to dynamic pre-request throttling based on PRC rate-limit headers. |
+| `rate_limited` | Enable dynamic pre-request throttling based on PRC rate-limit headers. Defaults to `True`; pass `False` to opt out. |
 | `user_agent` | Override default `erlc-api-python/<version>` user agent. |
 
 Common mistakes:
@@ -69,7 +69,7 @@ ERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
-    rate_limited: bool = False,
+    rate_limited: bool = True,
     user_agent: str | None = None,
 )
 ```
@@ -121,15 +121,18 @@ startup is still useful for app startup hooks and repeated calls.
 
 ## Dynamic Rate Limiting
 
-`retry_429=True` reacts after PRC returns a rate limit. `rate_limited=True`
-learns from successful and failed response headers and waits before avoidable
-requests:
+`retry_429=True` reacts after PRC returns a rate limit. `rate_limited=True` is
+the default and learns from successful and failed response headers before
+avoidable requests:
 
 ```python
-api = AsyncERLC("server-key", rate_limited=True)
+api = AsyncERLC("server-key")
 players = await api.players()
 snapshot = api.rate_limits
 ```
+
+Pass `rate_limited=False` only when your application already coordinates rate
+limits outside the wrapper.
 
 `api.rate_limits` returns a `RateLimitSnapshot` when dynamic limiting is enabled,
 or `None` when it is disabled. Global-key clients and server-key-only clients

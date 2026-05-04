@@ -15,13 +15,16 @@ This guide walks you through building a small FastAPI service that exposes ERLC 
 Use FastAPI's `lifespan` context manager to start and close `AsyncERLC` alongside the app. This replaces the deprecated `@app.on_event("startup"/"shutdown")` approach.
 
 ```python
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
-from erlc_api import AsyncERLC, cmd
+from fastapi import FastAPI, Header, HTTPException
+from erlc_api import AsyncERLC, CommandPolicy, CommandPolicyError, cmd
 from erlc_api.cache import AsyncCachedClient
 
-api = AsyncERLC("your-server-key", rate_limited=True)
+api = AsyncERLC(os.environ["ERLC_SERVER_KEY"])
 cached_api = AsyncCachedClient(api, ttl_s=5)
+announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
+admin_token = os.environ["ERLC_ADMIN_TOKEN"]
 
 
 @asynccontextmanager
@@ -76,9 +79,17 @@ class AnnounceBody(BaseModel):
     message: str
 
 @app.post("/announce")
-async def announce(body: AnnounceBody):
-    result = await api.command(cmd.h(body.message))
-    return {"ok": True, "message": result.message}
+async def announce(body: AnnounceBody, x_admin_token: str | None = Header(default=None)):
+    if x_admin_token != admin_token:
+        raise HTTPException(status_code=403, detail="Command access denied.")
+    try:
+        safe_command = announce_policy.validate(cmd.h(body.message))
+    except CommandPolicyError as exc:
+        raise HTTPException(status_code=400, detail=exc.result.reason) from exc
+
+    preview = await api.command(safe_command, dry_run=True)
+    result = await api.command(safe_command)
+    return {"ok": True, "command": preview.raw["command"], "message": result.message}
 ```
 
 ## 4. Error handling
@@ -86,7 +97,6 @@ async def announce(body: AnnounceBody):
 Convert API errors to proper HTTP responses using `HTTPException`.
 
 ```python
-from fastapi import HTTPException
 from erlc_api import AuthError, RateLimitError, ERLCError
 from erlc_api.diagnostics import diagnose_error
 
@@ -148,6 +158,8 @@ The API will be available at `http://localhost:8000`. FastAPI generates interact
 - **Starting the client outside `lifespan`.** Calling `await api.start()` at module level runs before an event loop exists and will raise a runtime error.
 - **Using `api.server(all=True)` for every route.** Use bundle presets or explicit includes so hot paths only request what they need.
 - **Caching write endpoints.** Cache helpers skip `command(...)`; keep command routes explicit.
+- **Leaving command routes public.** Protect them with authentication,
+  `CommandPolicy`, cooldown/rate limits, and audit logs.
 
 ## 8. Next steps
 

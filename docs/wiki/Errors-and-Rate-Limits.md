@@ -135,8 +135,8 @@ Important behavior:
 - The client retries at most once.
 - It sleeps only when `Retry-After`, body retry data, or reset time provide timing.
 - If the second attempt is also rate-limited, `RateLimitError` is raised.
-- `rate_limited=True` is separate and waits before requests using observed
-  headers.
+- `rate_limited=True` is enabled by default and waits before requests using
+  observed headers.
 
 Disable automatic retry:
 

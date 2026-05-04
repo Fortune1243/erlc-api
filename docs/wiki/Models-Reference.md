@@ -347,7 +347,10 @@ Returned by `command()`.
 Minimal example:
 
 ```python
-result = await api.command("h hello")
+from erlc_api import CommandPolicy
+
+policy = CommandPolicy(allowed={"h"}, max_length=120)
+result = await api.command(policy.validate("h hello"), dry_run=True)
 if result.success is False:
     print(result.message)
 ```

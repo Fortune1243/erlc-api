@@ -1,4 +1,4 @@
-# Comparison and Why erlc-api
+# Comparison and Why erlc-api.py
 
 `erlc-api.py` v2 focuses on the smallest useful wrapper surface: flat clients,
 typed responses, flexible commands, lazy utilities, and framework-neutral

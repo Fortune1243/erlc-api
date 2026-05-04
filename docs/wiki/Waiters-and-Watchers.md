@@ -31,7 +31,7 @@ cache and enable the client limiter:
 from erlc_api import AsyncERLC
 from erlc_api.cache import AsyncCachedClient
 
-api = AsyncERLC("server-key", rate_limited=True)
+api = AsyncERLC("server-key")
 cached_api = AsyncCachedClient(api, ttl_s=3)
 watcher = AsyncWatcher(cached_api, interval_s=5)
 ```

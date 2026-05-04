@@ -181,17 +181,22 @@ The router does not require an `AsyncERLC` or `ERLC` client. Close over your
 client when a handler needs to call PRC.
 
 ```python
-from erlc_api import AsyncERLC, cmd
+from erlc_api import AsyncERLC, CommandPolicy, CommandPolicyError, cmd
 from erlc_api.custom_commands import CustomCommandRouter
 
 api = AsyncERLC("server-key")
 router = CustomCommandRouter()
+announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
 
 
 @router.command("announce", "a")
 async def announce(ctx):
     message = ctx.rest()
-    result = await api.command(cmd.h(message))
+    try:
+        safe_command = announce_policy.validate(cmd.h(message))
+    except CommandPolicyError as exc:
+        return ctx.reply(exc.result.reason or "not allowed", ephemeral=True)
+    result = await api.command(safe_command)
     return ctx.reply(result.message or "sent")
 ```
 

@@ -15,29 +15,38 @@ This guide walks you through building a basic Discord bot that talks to a live E
 `AsyncERLC` must be started before commands run and closed when the bot shuts down. The right place for this in discord.py v2 is `setup_hook` (runs once before the bot connects) and an overridden `close`.
 
 ```python
+import logging
+import os
+
 import discord
 from discord.ext import commands
-from erlc_api import AsyncERLC, cmd
+from erlc_api import AsyncERLC, CommandPolicy, CommandPolicyError, cmd
 from erlc_api.cache import AsyncCachedClient
+from erlc_api.security import key_fingerprint
+
+logger = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents)
-api = AsyncERLC("your-server-key", rate_limited=True)
-cached_api = AsyncCachedClient(api, ttl_s=5)
+class ERLCBot(commands.Bot):
+    def __init__(self) -> None:
+        super().__init__(command_prefix="!", intents=intents)
+        server_key = os.environ["ERLC_SERVER_KEY"]
+        self.api = AsyncERLC(server_key)
+        self.cached_api = AsyncCachedClient(self.api, ttl_s=5)
+        self.announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
+        logger.info("Configured ERLC key %s", key_fingerprint(server_key))
+
+    async def setup_hook(self) -> None:
+        await self.api.start()
+
+    async def close(self) -> None:
+        await self.api.close()
+        await super().close()
 
 
-async def setup_hook():
-    await api.start()
-
-bot.setup_hook = setup_hook
-
-
-async def on_close():
-    await api.close()
-
-bot.close = on_close
+bot = ERLCBot()
 ```
 
 ## 3. Commands
@@ -47,7 +56,7 @@ bot.close = on_close
 ```python
 @bot.command()
 async def status(ctx):
-    info = await cached_api.server()
+    info = await bot.cached_api.server()
     await ctx.send(f"**{info.name}** — {info.current_players}/{info.max_players} players online")
 ```
 
@@ -56,7 +65,7 @@ async def status(ctx):
 ```python
 @bot.command()
 async def players(ctx):
-    online = await cached_api.players()
+    online = await bot.cached_api.players()
     if not online:
         await ctx.send("No players online.")
         return
@@ -70,7 +79,7 @@ async def players(ctx):
 ```python
 @bot.command()
 async def staff(ctx):
-    duty = (await cached_api.staff()).members
+    duty = (await bot.cached_api.staff()).members
     if not duty:
         await ctx.send("No staff on duty.")
         return
@@ -82,8 +91,19 @@ async def staff(ctx):
 
 ```python
 @bot.command()
+@commands.guild_only()
+@commands.has_permissions(manage_guild=True)
+@commands.cooldown(1, 30, commands.BucketType.guild)
 async def announce(ctx, *, message: str):
-    result = await api.command(cmd.h(message))
+    try:
+        safe_command = bot.announce_policy.validate(cmd.h(message))
+    except CommandPolicyError as exc:
+        await ctx.reply(exc.result.reason or "That command is not allowed.", mention_author=False)
+        return
+
+    preview = await bot.api.command(safe_command, dry_run=True)
+    logger.info("Discord announce by %s: %s", ctx.author.id, preview.raw["command"])
+    result = await bot.api.command(safe_command)
     await ctx.send(result.message or "Announcement sent.")
 ```
 
@@ -99,7 +119,7 @@ from erlc_api.discord_tools import DiscordFormatter
 @bot.command()
 async def status(ctx):
     try:
-        info = await cached_api.server()
+        info = await bot.cached_api.server()
         await ctx.send(f"**{info.name}** — {info.current_players}/{info.max_players} players online")
     except AuthError:
         await ctx.send("Invalid server key. Check your configuration.")
@@ -111,10 +131,23 @@ async def status(ctx):
         await ctx.send(**DiscordFormatter().diagnostics(diagnostics).to_dict())
 ```
 
+Add a local error handler for permission/cooldown failures:
+
+```python
+@announce.error
+async def announce_error(ctx, error):
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.reply("You need Manage Server permission to use this.", mention_author=False)
+    elif isinstance(error, commands.CommandOnCooldown):
+        await ctx.reply(f"Slow down. Try again in {error.retry_after:.0f}s.", mention_author=False)
+    else:
+        raise error
+```
+
 ## 5. Running the bot
 
 ```python
-bot.run("your-discord-bot-token")
+bot.run(os.environ["DISCORD_TOKEN"])
 ```
 
 ## 6. Optional Discord Payload Helpers
@@ -128,7 +161,7 @@ from erlc_api.status import StatusBuilder
 
 @bot.command()
 async def richstatus(ctx):
-    bundle = await cached_api.server(players=True, staff=True, queue=True, vehicles=True, emergency_calls=True)
+    bundle = await bot.cached_api.server(players=True, staff=True, queue=True, vehicles=True, emergency_calls=True)
     status = StatusBuilder(bundle).build()
     await ctx.send(**DiscordFormatter().server_status(status).to_dict())
 ```
@@ -148,7 +181,7 @@ servers = [
 
 @bot.command()
 async def servers(ctx):
-    manager = AsyncMultiServer(cached_api, servers, concurrency=3)
+    manager = AsyncMultiServer(bot.cached_api, servers, concurrency=3)
     summary = await manager.aggregate()
     await ctx.send(
         f"{summary['ok']}/{summary['servers']} servers online-ish, "
@@ -186,6 +219,10 @@ async def previewwarn(ctx, target: str, *, reason: str):
 - **Calling `await api.players()` before `setup_hook` completes.** The client raises if you call endpoints before `start()` has run.
 - **Caching commands.** `AsyncCachedClient` caches read endpoints only; always call `api.command(...)` directly.
 - **Using multi-server helpers to broadcast commands.** They intentionally support read-only methods.
+- **Showing raw keys in logs or error messages.** Use `key_fingerprint(...)`
+  when you need diagnostics.
+- **Letting every guild member execute commands.** Use Discord permissions,
+  cooldowns, and `CommandPolicy` before calling `bot.api.command(...)`.
 
 ## 10. Next steps
 

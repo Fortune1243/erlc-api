@@ -31,3 +31,6 @@ Thumbs.db
 # Local tooling binaries
 rg.exe
 ripgrep-*/
+
+# Others
+todo.md

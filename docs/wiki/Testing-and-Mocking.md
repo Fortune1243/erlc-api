@@ -106,8 +106,9 @@ limiter.after_response(
 assert limiter.before_request("GET", "/v2/server") == 5.0
 ```
 
-For client integration tests, pass fake transports and enable
-`rate_limited=True`.
+For client integration tests, pass fake transports. Rate limiting is enabled by
+default, so pass `rate_limited=False` only when a test specifically needs the
+old no-limiter behavior.
 
 ## Error Code Tests
 

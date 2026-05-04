@@ -2,7 +2,8 @@
 
 The wrapper keeps reliability behavior intentionally small. It parses PRC
 rate-limit metadata, raises typed errors, optionally performs one safe retry on
-`429`, and can opt in to dynamic pre-request limiting with `rate_limited=True`.
+`429`, and enables dynamic pre-request limiting by default with
+`rate_limited=True`.
 It does not include cache backends, circuit breakers, tracing, metrics sinks,
 request replay, or request coalescing.
 
@@ -56,10 +57,11 @@ api = AsyncERLC("server-key", retry_429=False)
 
 ## Dynamic Rate Limiter
 
-Enable dynamic limiting when your app polls or has bursty command handlers:
+Dynamic limiting is enabled by default, including for apps that poll or have
+bursty command handlers:
 
 ```python
-api = AsyncERLC("server-key", rate_limited=True)
+api = AsyncERLC("server-key")
 ```
 
 Behavior:
@@ -70,6 +72,12 @@ Behavior:
 - updates state from actual `429` responses;
 - tracks global-key requests separately from server-key-only requests;
 - stores state in memory only.
+
+Opt out only when your application already coordinates rate limits:
+
+```python
+api = AsyncERLC("server-key", rate_limited=False)
+```
 
 Inspect current state:
 
@@ -138,7 +146,7 @@ The wrapper handles:
 - decoding successful responses;
 - mapping known error codes to typed exceptions;
 - parsing rate-limit metadata;
-- optional dynamic pre-request waiting when `rate_limited=True`;
+- default dynamic pre-request waiting when `rate_limited=True`;
 - explicit read caching through `erlc_api.cache`;
 - bounded read fanout through `erlc_api.multiserver`;
 - closing sync and async HTTP clients.
@@ -154,7 +162,7 @@ Your application should handle:
 
 - Running many watchers at one-second intervals across multiple servers.
 - Treating `retry_429=True` as a full retry policy.
-- Expecting `rate_limited=True` to coordinate multiple Python processes.
+- Expecting the process-local limiter to coordinate multiple Python processes.
 - Swallowing `RateLimitError` without slowing future calls.
 - Assuming advisory `safe_interval()` values are official PRC limits.
 - Caching command results. Cache helpers intentionally skip command execution.

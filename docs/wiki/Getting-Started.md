@@ -97,14 +97,17 @@ large-app flows.
 
 ## Send A Command
 
-Commands can be plain strings or built with `cmd`:
+Commands can be plain strings or built with `cmd`. For bot or web input, put a
+local policy in front of command execution:
 
 ```python
-from erlc_api import cmd
+from erlc_api import CommandPolicy, cmd
 
-await api.command("h Hello")
-await api.command(":h Hello")
-await api.command(cmd.pm("Player", "hello"))
+policy = CommandPolicy(allowed={"h", "pm"}, max_length=120)
+
+await api.command(policy.validate("h Hello"))
+await api.command(policy.validate(":h Hello"))
+await api.command(policy.validate(cmd.pm("Player", "hello")))
 ```
 
 The wrapper normalizes missing leading colons and validates only essentials:

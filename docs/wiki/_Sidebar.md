@@ -42,4 +42,4 @@
 ## Migration And Context
 
 * [Migration to v2](./Migration-to-v2.md)
-* [Comparison and Why erlc-api](./Comparison-and-Why-erlc-api.md)
+* [Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)

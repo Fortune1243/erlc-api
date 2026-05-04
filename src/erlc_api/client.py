@@ -151,7 +151,7 @@ class AsyncERLC:
         base_url: str = "https://api.policeroleplay.community",
         timeout_s: float = 20.0,
         retry_429: bool = True,
-        rate_limited: bool = False,
+        rate_limited: bool = True,
         user_agent: str | None = None,
         transport: AsyncTransport | None = None,
     ) -> None:
@@ -324,7 +324,7 @@ class ERLC:
         base_url: str = "https://api.policeroleplay.community",
         timeout_s: float = 20.0,
         retry_429: bool = True,
-        rate_limited: bool = False,
+        rate_limited: bool = True,
         user_agent: str | None = None,
         transport: SyncTransport | None = None,
     ) -> None:

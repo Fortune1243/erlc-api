@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,6 +41,125 @@ class Command:
 
     def __str__(self) -> str:
         return self.text
+
+
+@dataclass(frozen=True)
+class CommandPolicyResult:
+    """Result from checking a command against a local application policy."""
+
+    command: str
+    name: str
+    allowed: bool
+    code: str | None = None
+    reason: str | None = None
+
+    def __bool__(self) -> bool:
+        return self.allowed
+
+
+class CommandPolicyError(ValueError):
+    """Raised when `CommandPolicy.validate(...)` rejects a command."""
+
+    def __init__(self, result: CommandPolicyResult) -> None:
+        message = result.reason or "Command is not allowed by policy."
+        super().__init__(message)
+        self.result = result
+
+
+def _command_name(command: str) -> str:
+    return command[1:].split(maxsplit=1)[0]
+
+
+def _normalize_policy_names(names: Iterable[str] | str | None, *, case_sensitive: bool) -> frozenset[str]:
+    if names is None:
+        return frozenset()
+
+    normalized: set[str] = set()
+    values = (names,) if isinstance(names, str) else names
+    for value in values:
+        if not isinstance(value, str):
+            raise TypeError("policy command names must be strings.")
+        text = value.strip()
+        if not text:
+            raise ValueError("policy command names cannot be blank.")
+        if "\n" in text or "\r" in text:
+            raise ValueError("policy command names cannot contain newlines.")
+        if text.startswith(":"):
+            text = text[1:]
+        name = text.split(maxsplit=1)[0].strip()
+        if not name:
+            raise ValueError("policy command names cannot be blank.")
+        normalized.add(name if case_sensitive else name.casefold())
+    return frozenset(normalized)
+
+
+class CommandPolicy:
+    """Local allowlist-first command guard for bots, web routes, and previews."""
+
+    def __init__(
+        self,
+        *,
+        allowed: Iterable[str] | str | None = None,
+        blocked: Iterable[str] | str | None = None,
+        max_length: int | None = 120,
+        case_sensitive: bool = False,
+    ) -> None:
+        if max_length is not None and max_length <= 0:
+            raise ValueError("max_length must be positive or None.")
+        self.case_sensitive = case_sensitive
+        self.max_length = max_length
+        self.allowed = _normalize_policy_names(allowed, case_sensitive=case_sensitive)
+        self.blocked = _normalize_policy_names(blocked, case_sensitive=case_sensitive)
+
+    def check(self, command: str | Command) -> CommandPolicyResult:
+        try:
+            normalized = normalize_command(command)
+        except (TypeError, ValueError) as exc:
+            return CommandPolicyResult(
+                command=str(command),
+                name="",
+                allowed=False,
+                code="invalid_command",
+                reason=str(exc),
+            )
+
+        name = _command_name(normalized)
+        key = name if self.case_sensitive else name.casefold()
+
+        if self.max_length is not None and len(normalized) > self.max_length:
+            return CommandPolicyResult(
+                command=normalized,
+                name=name,
+                allowed=False,
+                code="max_length",
+                reason=f"Command is longer than {self.max_length} characters.",
+            )
+
+        if key in self.blocked:
+            return CommandPolicyResult(
+                command=normalized,
+                name=name,
+                allowed=False,
+                code="blocked",
+                reason=f"Command '{name}' is blocked by policy.",
+            )
+
+        if key not in self.allowed:
+            return CommandPolicyResult(
+                command=normalized,
+                name=name,
+                allowed=False,
+                code="not_allowed",
+                reason=f"Command '{name}' is not in the allowed command set.",
+            )
+
+        return CommandPolicyResult(command=normalized, name=name, allowed=True)
+
+    def validate(self, command: str | Command) -> str:
+        result = self.check(command)
+        if not result:
+            raise CommandPolicyError(result)
+        return result.command
 
 
 def _stringify_part(value: Any) -> str:
@@ -93,6 +213,9 @@ __all__ = [
     "BuiltCommand",
     "Command",
     "CommandFactory",
+    "CommandPolicy",
+    "CommandPolicyError",
+    "CommandPolicyResult",
     "cmd",
     "infer_command_success",
     "normalize_command",

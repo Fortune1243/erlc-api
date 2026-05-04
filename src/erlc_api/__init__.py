@@ -1,3 +1,5 @@
+from importlib.metadata import PackageNotFoundError, version as _package_version
+
 from ._errors import (
     APIError,
     AuthError,
@@ -16,7 +18,15 @@ from ._errors import (
     ServerOfflineError,
 )
 from .client import AsyncERLC, ERLC, ValidationResult, ValidationStatus
-from .commands import Command, cmd, normalize_command, validate_command
+from .commands import (
+    Command,
+    CommandPolicy,
+    CommandPolicyError,
+    CommandPolicyResult,
+    cmd,
+    normalize_command,
+    validate_command,
+)
 from .models import (
     BanEntry,
     BanList,
@@ -36,6 +46,12 @@ from .models import (
     VehicleColor,
     parse_player_identifier,
 )
+
+try:
+    __version__ = _package_version("erlc-api.py")
+except PackageNotFoundError:
+    __version__ = "2.3.1"
+
 __all__ = [
     "APIError",
     "AsyncERLC",
@@ -44,6 +60,9 @@ __all__ = [
     "BanEntry",
     "BanList",
     "Command",
+    "CommandPolicy",
+    "CommandPolicyError",
+    "CommandPolicyResult",
     "CommandLogEntry",
     "CommandResult",
     "ERLC",
@@ -74,6 +93,7 @@ __all__ = [
     "Vehicle",
     "VehicleColor",
     "cmd",
+    "__version__",
     "normalize_command",
     "parse_player_identifier",
     "validate_command",

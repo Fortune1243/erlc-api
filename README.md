@@ -4,10 +4,12 @@
 [![Python](https://img.shields.io/pypi/pyversions/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![License](https://img.shields.io/badge/license-Custom_Attribution-blue)](LICENSE)
 
-Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a breaking,
-v2-first release with flat sync and async clients, typed dataclass responses by
-default, `raw=True` escape hatches, flexible commands, and explicit utility
-modules that only load when you import them.
+Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a v2-first
+release with flat sync and async clients, typed dataclass responses by default,
+safe rate-limit handling, flexible commands, and explicit utility modules that
+only load when you import them.
+
+Install the PyPI package as `erlc-api.py`; import it in Python as `erlc_api`.
 
 ## Install And Extras
 
@@ -40,21 +42,33 @@ Example:
 pip install "erlc-api.py[webhooks,export]"
 ```
 
+## Package Name And Import Name
+
+| Where | Name |
+| --- | --- |
+| PyPI install | `pip install erlc-api.py` |
+| Python import | `import erlc_api` |
+| Core imports | `from erlc_api import AsyncERLC, ERLC, cmd` |
+
+The repository URL still uses `erlc-api`, but the published package name is
+`erlc-api.py` to avoid ambiguity with other packages.
+
 ## Quickstart
 
 Async apps and bots:
 
 ```python
 import asyncio
-from erlc_api import AsyncERLC, cmd
+from erlc_api import AsyncERLC, CommandPolicy, cmd
 
 
 async def main() -> None:
+    policy = CommandPolicy(allowed={"h"}, max_length=120)
     async with AsyncERLC("server-key") as api:
         bundle = await api.server(players=True, queue=True, staff=True)
-        result = await api.command(cmd.h("Hello from the API"))
+        preview = await api.command(policy.validate(cmd.h("Hello from the API")), dry_run=True)
 
-        print(bundle.name, len(bundle.players or []), result.message)
+        print(bundle.name, len(bundle.players or []), preview.raw["command"])
 
 
 asyncio.run(main())
@@ -63,12 +77,29 @@ asyncio.run(main())
 Sync scripts:
 
 ```python
-from erlc_api import ERLC
+from erlc_api import ERLC, CommandPolicy
 
 with ERLC("server-key") as api:
+    policy = CommandPolicy(allowed={"h"}, max_length=120)
     players = api.players()
-    result = api.command("h Hello")
+    result = api.command(policy.validate("h Hello"), dry_run=True)
     print(len(players), result.message)
+```
+
+## Safe Defaults
+
+- Dynamic process-local rate limiting is enabled by default with
+  `rate_limited=True`.
+- `retry_429=True` sleeps once and retries once when PRC provides retry timing.
+- Commands stay flexible, but bot/web examples should gate execution with
+  `CommandPolicy`, permissions, and cooldowns.
+- Server keys are never stored or encrypted by the wrapper; keep them in your
+  secret manager or environment.
+
+```python
+from erlc_api.security import key_fingerprint
+
+print(key_fingerprint("server-key"))  # safe for logs; never log the key itself
 ```
 
 ## Client Reference
@@ -125,8 +156,8 @@ raising common API errors.
 
 ## Endpoint Methods
 
-Typed models are returned by default. Pass `raw=True` to receive the exact JSON
-payload returned by PRC.
+Typed models are returned by default. Pass `raw=True` when you need raw PRC data;
+the exact shape depends on the method and is summarized below.
 
 | Method | PRC endpoint | Default return type | Notes |
 | --- | --- | --- | --- |
@@ -144,6 +175,28 @@ payload returned by PRC.
 | `command(command, ...)` | `POST /v2/server/command` | `CommandResult` | Accepts strings or `cmd` values |
 | `request(method, path, ...)` | Any path | raw JSON/text | Low-level escape hatch |
 
+### Endpoint Version Map
+
+| API area | PRC version | Wrapper methods |
+| --- | --- | --- |
+| Server status and includes | v2 | `server`, `players`, `staff`, `queue`, logs, `vehicles`, `emergency_calls` |
+| Command execution | v2 | `command` |
+| Bans | v1 | `bans` |
+| Custom requests | caller chooses | `request` |
+
+### Support Matrix
+
+| Feature | Built in | Notes |
+| --- | --- | --- |
+| Async client | Yes | `AsyncERLC` |
+| Sync client | Yes | `ERLC` |
+| Typed dataclasses | Yes | Default response mode |
+| Raw PRC data | Yes | `raw=True` |
+| Dynamic rate limiting | Yes | Enabled by default, process-local |
+| Event webhook verification | Optional extra | `erlc-api.py[webhooks]` |
+| Discord bot framework | No | Docs use `discord.py`; wrapper stays framework-neutral |
+| Persistent/distributed cache | No | Bring your own adapter or external store |
+
 `server()` include options:
 
 ```python
@@ -158,7 +211,7 @@ raw_payload = await api.server(all=True, raw=True)
 Commands are intentionally flexible:
 
 ```python
-from erlc_api import cmd, normalize_command
+from erlc_api import CommandPolicy, CommandPolicyError, cmd, normalize_command
 
 await api.command(":h hi")
 await api.command("h hi")
@@ -185,6 +238,43 @@ Dry-run validates and returns a local `CommandResult` without sending HTTP:
 preview = await api.command(cmd.pm("Player", "hello"), dry_run=True)
 print(preview.raw["command"], preview.success)
 ```
+
+For Discord bots, web routes, and custom-command handlers, put an application
+policy in front of command execution:
+
+```python
+policy = CommandPolicy(allowed={"h", "pm"}, max_length=120)
+
+try:
+    safe_command = policy.validate(cmd.h("Short staff announcement"))
+except CommandPolicyError as exc:
+    print(exc.result.reason)
+else:
+    await api.command(safe_command)
+```
+
+`CommandPolicy.check(...)` returns a `CommandPolicyResult` for previews and UI;
+`CommandPolicy.validate(...)` raises `CommandPolicyError` when blocked.
+
+## Raw Response Behavior
+
+`raw=True` returns PRC data before typed model decoding, but wrapper convenience
+methods intentionally return the section they are named after:
+
+| Call | `raw=True` returns |
+| --- | --- |
+| `api.server(raw=True)` | Full `/v2/server` payload |
+| `api.server(players=True, raw=True)` | Full `/v2/server` payload including `Players` |
+| `api.players(raw=True)` | Raw `Players` list only |
+| `api.staff(raw=True)` | Raw `Staff` object only |
+| `api.queue(raw=True)` | Raw `Queue` list only |
+| log/vehicle/call helpers with `raw=True` | Raw section list only |
+| `api.bans(raw=True)` | Full raw v1 bans mapping |
+| `api.command(raw=True)` | Raw v2 command response |
+| `api.request(...)` | Raw decoded response body |
+
+Model `.to_dict()` output uses wrapper field names and helper shapes. It is
+JSON-safe, but it is not guaranteed to be byte-for-byte identical to PRC JSON.
 
 ## Models
 
@@ -348,6 +438,19 @@ print(api.rate_limits)
 
 Pass `rate_limited=False` only when your application has its own limiter and
 you want to disable the wrapper's pre-request waiting.
+
+## Known Limitations
+
+- Built-in rate limiting is process-local. Multiple bot shards, containers, or
+  workers need external coordination if they share keys.
+- The wrapper does not store, encrypt, rotate, or validate server keys unless
+  your app calls `validate_key()`.
+- Command execution is powerful. Gate it with Discord permissions, web auth,
+  cooldowns, `CommandPolicy`, dry-run previews, and audit logs.
+- Discord and FastAPI examples are safe templates, not complete production bot
+  or web security systems.
+- Optional rendering/export/webhook features load only when explicitly imported
+  and installed through extras.
 
 ## Documentation Deep Dives
 

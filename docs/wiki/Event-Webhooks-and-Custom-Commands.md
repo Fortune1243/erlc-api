@@ -15,7 +15,7 @@ shows the lower-level mixed event router.
 ## 1. Install webhook support
 
 ```
-pip install -e .[webhooks]
+pip install "erlc-api.py[webhooks]"
 ```
 
 ## 2. Build a secure FastAPI endpoint
@@ -115,10 +115,15 @@ async def handle_players(command, event):
     return {"players": [player.name for player in players]}
 ```
 
-Keep command execution explicit through the original client:
+Keep command execution explicit through the original client and protect it with
+your own auth/predicate checks plus `CommandPolicy`:
 
 ```python
-result = await api.command("h hello")
+from erlc_api import CommandPolicy, cmd
+
+announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
+safe_command = announce_policy.validate(cmd.h("hello"))
+result = await api.command(safe_command)
 ```
 
 ## Related Pages

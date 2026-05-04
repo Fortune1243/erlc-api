@@ -6,7 +6,31 @@ All endpoint methods exist on both `AsyncERLC` and `ERLC`. Async examples use
 All endpoint methods accept:
 
 - `server_key=` to override the client default key.
-- `raw=True` to return exact API JSON instead of typed models.
+- `raw=True` to return raw PRC data instead of typed models. Section helpers
+  return their named raw section; `server(raw=True)` returns the full v2 payload.
+
+## Endpoint Version Map
+
+| API area | PRC version | Wrapper methods |
+| --- | --- | --- |
+| Server status and include sections | v2 | `server`, `players`, `staff`, `queue`, logs, `vehicles`, `emergency_calls` |
+| Command execution | v2 | `command` |
+| Bans | v1 | `bans` |
+| Custom escape hatch | caller chooses | `request` |
+
+## Support Matrix
+
+| Capability | Support | Notes |
+| --- | --- | --- |
+| Async client | Yes | `AsyncERLC` |
+| Sync client | Yes | `ERLC` |
+| Typed dataclasses | Yes | Default endpoint mode |
+| Raw PRC data | Yes | `raw=True` |
+| Default dynamic limiter | Yes | Process-local only |
+| Optional global key header | Yes | `global_key=` sends `Authorization` |
+| Event webhook verification | Optional extra | `erlc-api.py[webhooks]` |
+| Discord library integration | No direct dependency | Use docs/templates and plain payload helpers |
+| Distributed rate limiting/cache | Bring your own | Use external stores for multi-process deployments |
 
 ## Method Table
 
