@@ -1,5 +1,9 @@
 # erlc-api.py
 
+[![PyPI](https://img.shields.io/pypi/v/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
+[![Python](https://img.shields.io/pypi/pyversions/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
+[![License](https://img.shields.io/badge/license-Custom_Attribution-blue)](LICENSE)
+
 Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a breaking,
 v2-first release with flat sync and async clients, typed dataclass responses by
 default, `raw=True` escape hatches, flexible commands, and explicit utility
@@ -80,7 +84,7 @@ AsyncERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
-    rate_limited: bool = False,
+    rate_limited: bool = True,
     user_agent: str | None = None,
 )
 ```
@@ -98,7 +102,7 @@ ERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
-    rate_limited: bool = False,
+    rate_limited: bool = True,
     user_agent: str | None = None,
 )
 ```
@@ -239,7 +243,7 @@ models, errors, and `cmd`.
 | Audit | `from erlc_api.audit import AuditLog` | JSON-safe audit events for commands, webhooks, watchers, and moderation |
 | Idempotency | `from erlc_api.idempotency import MemoryDeduper, FileDeduper` | TTL dedupe for webhook deliveries and watcher restarts |
 | Limits | `from erlc_api.limits import poll_plan, safe_interval` | Conservative polling guidance without fake PRC limit claims |
-| Rate Limit | `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter` | Dynamic in-memory limiter used by `rate_limited=True` |
+| Rate Limit | `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter` | Dynamic in-memory limiter used by clients by default |
 | Error Codes | `from erlc_api.error_codes import explain_error_code` | Explain PRC error codes and wrapper exception mappings |
 | Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Framework-neutral router for PRC webhook messages starting with `;` |
 | Location | `from erlc_api.location import LocationTools` | Distances, nearest players, postal/street matching, map URLs, optional overlays |
@@ -334,13 +338,16 @@ On `429`, `RateLimitError` exposes:
 By default `retry_429=True`, so the transport sleeps once and retries once when
 it has retry timing. Set `retry_429=False` to handle rate limits yourself.
 
-Pass `rate_limited=True` to enable the opt-in dynamic limiter. It learns from
-PRC rate-limit headers and waits before avoidable requests:
+Dynamic rate limiting is enabled by default. It learns from PRC rate-limit
+headers and waits before avoidable requests:
 
 ```python
-api = AsyncERLC("server-key", rate_limited=True)
+api = AsyncERLC("server-key")
 print(api.rate_limits)
 ```
+
+Pass `rate_limited=False` only when your application has its own limiter and
+you want to disable the wrapper's pre-request waiting.
 
 ## Documentation Deep Dives
 
@@ -375,7 +382,7 @@ The README is the compact API reference. The full documentation source lives in
 - [Error Handling and Troubleshooting](docs/wiki/Error-Handling-and-Troubleshooting.md)
 - [Testing and Mocking](docs/wiki/Testing-and-Mocking.md)
 - [Migration to v2](docs/wiki/Migration-to-v2.md)
-- [Comparison and Why erlc-api](docs/wiki/Comparison-and-Why-erlc-api.md)
+- [Comparison and Why erlc-api.py](docs/wiki/Comparison-and-Why-erlc-api.md)
 
 ## Development
 
