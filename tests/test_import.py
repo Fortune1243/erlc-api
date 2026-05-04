@@ -43,6 +43,15 @@ names = [
     "erlc_api.custom_commands",
     "erlc_api.ratelimit",
     "erlc_api.error_codes",
+    "erlc_api.location",
+    "erlc_api.bundle",
+    "erlc_api.rules",
+    "erlc_api.multiserver",
+    "erlc_api.discord_tools",
+    "erlc_api.diagnostics",
+    "erlc_api.cache",
+    "erlc_api.status",
+    "erlc_api.command_flows",
     "erlc_api.webhooks",
 ]
 print(json.dumps([name for name in names if name in sys.modules]))

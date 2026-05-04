@@ -23,6 +23,7 @@
 
 * [Utilities Reference](./Utilities-Reference.md)
 * [Ops Utilities Reference](./Ops-Utilities-Reference.md)
+* [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 * [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md)
 * [Moderation Helpers](./Moderation-Helpers.md)
 * [Waiters and Watchers](./Waiters-and-Watchers.md)

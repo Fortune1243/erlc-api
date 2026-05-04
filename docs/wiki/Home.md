@@ -48,6 +48,9 @@ flexible commands, and explicit lazy utility modules.
   diff, time, schema, and lazy loading.
 - [Ops Utilities Reference](./Ops-Utilities-Reference.md): snapshots, audit,
   idempotency, polling plans, and custom commands.
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md): location,
+  bundle presets, rules, multi-server reads, Discord payloads, diagnostics,
+  caching, status, and command flows.
 - [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md):
   output helpers for Discord, console, dashboards, CSV, Markdown, HTML, and XLSX.
 - [Moderation Helpers](./Moderation-Helpers.md): safe command composition,

@@ -105,6 +105,30 @@ result = await AsyncModerator(api).warn("Avi", "RDM", dry_run=True)
 print(result.success, result.raw["command"])
 ```
 
+## Command Flows
+
+Use `erlc_api.command_flows` when you need a reusable moderation sequence that
+can be reviewed, logged, or confirmed before execution.
+
+```python
+from erlc_api.command_flows import CommandFlowBuilder, CommandTemplate
+
+warn_template = CommandTemplate("warn", "warn {target} {reason}")
+
+flow = (
+    CommandFlowBuilder("warn-and-pm")
+    .template(warn_template, target="Avi", reason="RDM")
+    .step("pm Avi Please review the rules")
+    .build()
+)
+
+print(flow.preview())
+```
+
+`CommandFlow` deliberately does not execute the steps. If a moderator confirms
+the preview, loop over `flow.to_commands()` and call `api.command(...)`
+explicitly.
+
 ## Audit Messages
 
 Signature:
@@ -135,6 +159,7 @@ warned Avi by Console: RDM
 Common mistakes:
 
 - Treating audit messages as persistent storage. Store them in your own logs or database if needed.
+- Treating command flows as an execution engine. They preview and validate only.
 
 ## Safer Custom Workflow
 
@@ -155,6 +180,7 @@ This pattern keeps lookups explicit and leaves the command execution path simple
 ## Related Pages
 
 - [Earlier in the guide: Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Next in the guide: Waiters and Watchers](./Waiters-and-Watchers.md)
 
 ---

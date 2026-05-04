@@ -59,14 +59,13 @@ class RateLimitState:
 
     def wait_seconds(self, now: float | None = None) -> float:
         current = _now_default() if now is None else now
-        waits: list[float] = []
+        is_exhausted = self.remaining is not None and self.remaining <= 0
+        has_retry_window = self.retry_after_s is not None or is_exhausted
+        if self.reset_epoch_s is not None and has_retry_window:
+            return max(0.0, self.reset_epoch_s - current)
         if self.retry_after_s is not None:
-            waits.append(max(0.0, self.retry_after_s))
-        if self.remaining is not None and self.remaining <= 0 and self.reset_epoch_s is not None:
-            waits.append(max(0.0, self.reset_epoch_s - current))
-        if self.retry_after_s is not None and self.reset_epoch_s is not None:
-            waits.append(max(0.0, self.reset_epoch_s - current))
-        return max(waits, default=0.0)
+            return max(0.0, self.retry_after_s)
+        return 0.0
 
     def to_dict(self) -> dict[str, str | int | float | None]:
         return {
@@ -141,6 +140,8 @@ class _BaseLimiter:
         retry_after = _float_header(headers, "Retry-After")
         if bucket is None and limit is None and remaining is None and reset is None and retry_after is None:
             return None
+        if reset is None and retry_after is not None:
+            reset = self._now() + retry_after
 
         return RateLimitState(
             bucket=bucket or _route_key(method, path),

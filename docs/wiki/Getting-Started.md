@@ -72,7 +72,7 @@ bundle = await api.server(players=True, queue=True, staff=True)
 print(bundle.name)
 print(len(bundle.players or []))
 print(len(bundle.queue or []))
-print(bundle.staff.members() if bundle.staff else [])
+print(bundle.staff.members if bundle.staff else [])
 ```
 
 Use `all=True` when you want every v2 section the wrapper supports:

@@ -8,6 +8,8 @@ Async imports:
 ```python
 from erlc_api.wait import AsyncWaiter
 from erlc_api.watch import AsyncWatcher
+from erlc_api.cache import AsyncCachedClient
+from erlc_api.rules import AsyncRuleEngine, Conditions
 ```
 
 Sync imports:
@@ -22,11 +24,25 @@ from erlc_api.watch import Watcher
 The default interval is `2.0` seconds. Pass a larger interval for low-traffic
 jobs or when you are close to rate limits.
 
+For repeated watcher reads in a bot or dashboard, wrap the API with a short TTL
+cache and enable the client limiter:
+
+```python
+from erlc_api import AsyncERLC
+from erlc_api.cache import AsyncCachedClient
+
+api = AsyncERLC("server-key", rate_limited=True)
+cached_api = AsyncCachedClient(api, ttl_s=3)
+watcher = AsyncWatcher(cached_api, interval_s=5)
+```
+
 Common mistakes:
 
 - Setting very small intervals for busy servers.
 - Forgetting that waiters use repeated API calls.
 - Expecting waiters to bypass PRC rate limits. They do not.
+- Using the same one-second watcher across many servers. Use
+  `erlc_api.multiserver` with bounded concurrency for fleet dashboards.
 
 ## AsyncWaiter
 
@@ -175,6 +191,26 @@ async for event in watcher.events(limit=10):
     print(event.type)
 ```
 
+## Watchers With Rules
+
+Rules are a good fit for watcher events because they return matches without
+sending commands.
+
+```python
+from erlc_api.rules import AsyncRuleEngine, Conditions
+
+engine = AsyncRuleEngine()
+engine.add("queue-active", Conditions.queue_length(at_least=1), severity="info")
+
+async for event in watcher.events(limit=10):
+    matches = await engine.evaluate(event.snapshot, event=event)
+    for match in matches:
+        print(match.rule_name, match.message)
+```
+
+Use callbacks when your app needs to emit logs, webhooks, or Discord messages.
+Keep PRC command execution explicit in your own handler.
+
 Important options:
 
 - Register `event_type="*"` to receive every event in one callback.
@@ -217,6 +253,8 @@ for event in watcher.events(limit=5):
 Common mistakes:
 
 - Registering async callbacks on sync `Watcher`. Use `AsyncWatcher` for async callbacks.
+- Expecting rules registered around watchers to execute PRC commands. They only
+  return matches and call user callbacks.
 
 ## Scheduling Extra
 
@@ -226,6 +264,7 @@ or polling calls in a scheduler. The core watcher classes do not require it.
 ## Related Pages
 
 - [Earlier in the guide: Moderation Helpers](./Moderation-Helpers.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Next in the guide: Webhooks Reference](./Webhooks-Reference.md)
 
 ---

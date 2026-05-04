@@ -100,6 +100,37 @@ plan = poll_plan(server_count=2, endpoint_count=3, timeout_s=120)
 This module does not claim official PRC rate limits. It only helps avoid overly
 aggressive polling in your own app.
 
+## Read Caching
+
+For dashboards and bots that repeat the same reads, use explicit memory TTL
+caching instead of polling harder:
+
+```python
+from erlc_api.cache import AsyncCachedClient
+
+cached = AsyncCachedClient(api, ttl_s=5)
+players = await cached.players()
+```
+
+`CachedClient` and `AsyncCachedClient` cache read endpoints only. Commands are
+never cached.
+
+## Multi-Server Fanout
+
+For multiple private servers, use bounded concurrency so one dashboard refresh
+does not send an unbounded burst:
+
+```python
+from erlc_api.multiserver import AsyncMultiServer, ServerRef
+
+servers = [ServerRef("main", "key-1"), ServerRef("training", "key-2")]
+manager = AsyncMultiServer(api, servers, concurrency=3)
+statuses = await manager.status()
+```
+
+Per-server errors are collected by default, so one failed server does not hide
+the state of every other server.
+
 ## Reliability Boundaries
 
 The wrapper handles:
@@ -108,6 +139,8 @@ The wrapper handles:
 - mapping known error codes to typed exceptions;
 - parsing rate-limit metadata;
 - optional dynamic pre-request waiting when `rate_limited=True`;
+- explicit read caching through `erlc_api.cache`;
+- bounded read fanout through `erlc_api.multiserver`;
 - closing sync and async HTTP clients.
 
 Your application should handle:
@@ -124,11 +157,14 @@ Your application should handle:
 - Expecting `rate_limited=True` to coordinate multiple Python processes.
 - Swallowing `RateLimitError` without slowing future calls.
 - Assuming advisory `safe_interval()` values are official PRC limits.
+- Caching command results. Cache helpers intentionally skip command execution.
+- Using unbounded multi-server fanout in a bot command.
 
 ## Related Pages
 
 - [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
 - [Ops Utilities Reference](./Ops-Utilities-Reference.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Waiters and Watchers](./Waiters-and-Watchers.md)
 
 ---

@@ -26,7 +26,8 @@ Optional extras:
 | `time` | `python-dateutil` | `TimeTools().parse(..., enhanced=True)` |
 | `rich` | `rich` | `Formatter().rich_table(...)` |
 | `scheduling` | `apscheduler` | Advanced scheduling integrations around watchers |
-| `utils` | all utility extras | Export, time, rich, and scheduling helpers |
+| `location` | `Pillow` | Optional map overlays through `MapRenderer` |
+| `utils` | all utility extras | Export, time, rich, scheduling, and location helpers |
 | `all` | webhooks plus utility extras | Everything optional |
 
 Example:
@@ -127,7 +128,7 @@ payload returned by PRC.
 | --- | --- | --- | --- |
 | `server(...)` | `GET /v2/server` | `ServerBundle` | Accepts include flags for v2 sections |
 | `players()` | `GET /v2/server?Players=true` | `list[Player]` | Parses `PlayerName:Id` |
-| `staff()` | `GET /v2/server?Staff=true` | `StaffList` | Staff object maps plus `.members()` |
+| `staff()` | `GET /v2/server?Staff=true` | `StaffList` | Staff object maps plus `.members` |
 | `queue()` | `GET /v2/server?Queue=true` | `list[int]` | Queue user IDs in API order |
 | `join_logs()` | `GET /v2/server?JoinLogs=true` | `list[JoinLogEntry]` | Includes join/leave flag and timestamp |
 | `kill_logs()` | `GET /v2/server?KillLogs=true` | `list[KillLogEntry]` | Includes killer/victim helpers |
@@ -193,7 +194,7 @@ Key models:
 | `ServerInfo` | `server()` without sections | `name`, `owner_id`, `current_players`, `max_players` |
 | `ServerBundle` | `server()` | server fields plus optional `players`, `staff`, logs, queue, vehicles |
 | `Player` | `players()` | `player`, `name`, `user_id`, `permission`, `callsign`, `team`, `location` |
-| `StaffList` | `staff()` | `co_owners`, `admins`, `mods`, `helpers`, `.members()` |
+| `StaffList` | `staff()` | `co_owners`, `admins`, `mods`, `helpers`, `.members` |
 | `CommandLogEntry` | `command_logs()` | `player`, `name`, `user_id`, `timestamp`, `command` |
 | `CommandResult` | `command()` | `message`, `success` |
 
@@ -241,6 +242,15 @@ models, errors, and `cmd`.
 | Rate Limit | `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter` | Dynamic in-memory limiter used by `rate_limited=True` |
 | Error Codes | `from erlc_api.error_codes import explain_error_code` | Explain PRC error codes and wrapper exception mappings |
 | Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Framework-neutral router for PRC webhook messages starting with `;` |
+| Location | `from erlc_api.location import LocationTools` | Distances, nearest players, postal/street matching, map URLs, optional overlays |
+| Bundle | `from erlc_api.bundle import AsyncBundle, Bundle` | Named/custom v2 bundle presets without changing the client |
+| Rules | `from erlc_api.rules import RuleEngine, Conditions` | Evaluate flexible alert rules and return matches/callback results |
+| Multi Server | `from erlc_api.multiserver import AsyncMultiServer, MultiServer` | Read and aggregate multiple named servers with bounded concurrency |
+| Discord Tools | `from erlc_api.discord_tools import DiscordFormatter` | Dependency-free Discord embed/message payload dictionaries |
+| Diagnostics | `from erlc_api.diagnostics import diagnose_error` | User-facing diagnostics from errors, rate limits, command results, and status |
+| Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols |
+| Status | `from erlc_api.status import AsyncStatus, StatusBuilder` | Typed dashboard status snapshots with `.to_dict()` |
+| Command Flows | `from erlc_api.command_flows import CommandFlowBuilder` | Preview and validate command sequences without executing them |
 
 Example:
 
@@ -249,12 +259,15 @@ from erlc_api.find import Finder
 from erlc_api.filter import Filter
 from erlc_api.export import Exporter
 from erlc_api.snapshot import SnapshotStore
+from erlc_api.bundle import AsyncBundle
+from erlc_api.status import StatusBuilder
 
-bundle = await api.server(all=True)
+bundle = await AsyncBundle(api).dashboard()
 player = Finder(bundle).player("Avi")
 police = Filter(bundle.players or []).team("Police").all()
 csv_text = Exporter(police).csv()
 SnapshotStore("snapshots.jsonl").save(bundle)
+status = StatusBuilder(bundle).build()
 ```
 
 Custom in-game commands are received through PRC Event Webhooks. Use
@@ -349,6 +362,7 @@ The README is the compact API reference. The full documentation source lives in
 - [Function List](docs/wiki/Function-List.md)
 - [Utilities Reference](docs/wiki/Utilities-Reference.md)
 - [Ops Utilities Reference](docs/wiki/Ops-Utilities-Reference.md)
+- [Workflow Utilities Reference](docs/wiki/Workflow-Utilities-Reference.md)
 - [Formatting, Analytics, and Export](docs/wiki/Formatting-Analytics-and-Export.md)
 - [Moderation Helpers](docs/wiki/Moderation-Helpers.md)
 - [Waiters and Watchers](docs/wiki/Waiters-and-Watchers.md)

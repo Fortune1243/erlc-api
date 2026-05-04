@@ -121,12 +121,41 @@ assert info.retryable is True
 Also assert that top-level `import erlc_api` does not import
 `erlc_api.error_codes` or `erlc_api.ratelimit`.
 
+## Workflow Utility Tests
+
+The 2.3 workflow utilities are easiest to test with fake clients and already
+decoded models:
+
+```python
+from erlc_api.bundle import AsyncBundle
+from erlc_api.status import StatusBuilder
+from erlc_api.cache import AsyncCachedClient
+
+bundle = await AsyncBundle(fake_api).dashboard()
+status = StatusBuilder(bundle).build()
+cached = AsyncCachedClient(fake_api, ttl_s=5)
+```
+
+Recommended scenarios:
+
+- location geometry and map URL helpers with fixed coordinates;
+- missing Pillow errors for `MapRenderer`;
+- bundle preset expansion and invalid include names;
+- rule matches and callbacks without command side effects;
+- multi-server per-server error collection;
+- cache hits, misses, TTL expiry, and command non-caching;
+- command-flow previews and missing template placeholders;
+- Discord payload dictionaries without importing a Discord library.
+
+Keep top-level import tests updated whenever a new utility module is added.
+
 ## Common Mistakes
 
 - Calling the live PRC API from unit tests.
 - Sleeping for real production intervals in waiter/watcher tests.
 - Testing webhook verification with JSON strings instead of raw bytes.
 - Asserting exact `.to_dict()` output when the test only needs one field.
+- Letting a rule, cache, or command-flow test call `api.command()` accidentally.
 
 ## Related Pages
 

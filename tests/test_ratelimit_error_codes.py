@@ -152,6 +152,31 @@ def test_rate_limiter_missing_headers_do_not_block() -> None:
     assert limiter.snapshot().states == ()
 
 
+def test_rate_limiter_retry_after_wait_expires() -> None:
+    now = 100.0
+    sleeps: list[float] = []
+
+    def clock() -> float:
+        return now
+
+    limiter = RateLimiter(now=clock, sleep=sleeps.append)
+    err = RateLimitError("Slow down", method="GET", path="/v2/server", retry_after=3, bucket="server")
+    limiter.after_error(err, method="GET", path="/v2/server")
+
+    assert limiter.before_request("GET", "/v2/server") == 3.0
+    now = 104.0
+    assert limiter.before_request("GET", "/v2/server") == 0.0
+
+    limiter.reset()
+    now = 200.0
+    limiter.after_response("GET", "/v2/server", {"Retry-After": "3", "X-RateLimit-Bucket": "server"})
+
+    assert limiter.before_request("GET", "/v2/server") == 3.0
+    now = 204.0
+    assert limiter.before_request("GET", "/v2/server") == 0.0
+    assert sleeps == [3.0, 3.0]
+
+
 def test_error_code_helpers_explain_and_map_known_codes() -> None:
     info = explain_error_code(4001)
     assert info is not None

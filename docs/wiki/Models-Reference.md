@@ -199,13 +199,13 @@ Helper:
 
 | Helper | Return type | Purpose |
 | --- | --- | --- |
-| `.members()` | `list[StaffMember]` | Flatten co-owner/admin/mod/helper maps into one list. |
+| `.members` | `list[StaffMember]` | Flatten co-owner/admin/mod/helper maps into one list. |
 
 Minimal example:
 
 ```python
 staff = await api.staff()
-admins = [member for member in staff.members() if member.role == "Admin"]
+admins = [member for member in staff.members if member.role == "Admin"]
 ```
 
 ## Log Models

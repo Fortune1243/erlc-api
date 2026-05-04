@@ -57,7 +57,8 @@ Install extras only when needed:
 | `time` | `python-dateutil` | Enhanced timestamp parsing. |
 | `rich` | `rich` | Rich terminal tables and panels. |
 | `scheduling` | `apscheduler` | Advanced scheduling integrations around watchers. |
-| `utils` | Utility extras | Export, time, rich, and scheduling helpers. |
+| `location` | `Pillow` | Optional local map overlays through `MapRenderer`. |
+| `utils` | Utility extras | Export, time, rich, scheduling, and location helpers. |
 | `all` | Everything optional | Webhooks plus all utility extras. |
 
 Examples:
@@ -65,6 +66,7 @@ Examples:
 ```bash
 pip install "erlc-api.py[webhooks]"
 pip install "erlc-api.py[export,rich]"
+pip install "erlc-api.py[location]"
 pip install "erlc-api.py[all]"
 ```
 
@@ -101,7 +103,7 @@ working.
 - Installing `erlc_api` instead of `erlc-api.py`.
 - Importing `erlc-api.py` instead of `erlc_api`.
 - Installing webhook verification without the `webhooks` extra.
-- Expecting optional XLSX, rich, or enhanced time parsing dependencies in the
+- Expecting optional XLSX, rich, location rendering, or enhanced time parsing dependencies in the
   base install.
 
 ## Related Pages

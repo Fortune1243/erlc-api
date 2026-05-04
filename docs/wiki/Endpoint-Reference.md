@@ -107,13 +107,13 @@ Minimal example:
 
 ```python
 staff = await api.staff()
-for member in staff.members():
+for member in staff.members:
     print(member.role, member.name, member.user_id)
 ```
 
 Common mistakes:
 
-- Treating `StaffList` as a plain list. Call `.members()` when you want flattened staff members.
+- Treating `StaffList` as a plain list. Use `.members` when you want flattened staff members.
 
 ## `queue`
 

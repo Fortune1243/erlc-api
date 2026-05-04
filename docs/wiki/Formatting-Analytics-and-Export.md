@@ -11,6 +11,12 @@ from erlc_api.analytics import Analyzer
 from erlc_api.export import Exporter
 ```
 
+For Discord embed/message payload dictionaries, use the 2.3 workflow module:
+
+```python
+from erlc_api.discord_tools import DiscordFormatter
+```
+
 ## Formatter
 
 Signature:
@@ -69,6 +75,44 @@ Common mistakes:
 - Assuming `Formatter` paginates Discord messages. It clips text; if you need
   pagination, split the returned string in your bot.
 
+## DiscordFormatter
+
+Import:
+
+```python
+from erlc_api.discord_tools import DiscordFormatter, DiscordEmbed, DiscordMessage
+```
+
+Purpose: create Discord-compatible dictionaries without importing `discord.py`.
+
+Methods:
+
+| Method | Return type | Purpose |
+| --- | --- | --- |
+| `server_status(status)` | `DiscordMessage` | Embed for a typed `ServerStatus`. |
+| `players(players)` | `DiscordMessage` | Embed listing players and teams. |
+| `queue(queue)` | `DiscordMessage` | Embed listing queued user IDs. |
+| `diagnostics(diagnostics)` | `DiscordMessage` | Embed for diagnostics. |
+| `error(error)` | `DiscordMessage` | Error embed. |
+| `command_result(result)` | `DiscordMessage` | Command result embed. |
+
+Minimal example:
+
+```python
+from erlc_api.discord_tools import DiscordFormatter
+from erlc_api.status import StatusBuilder
+
+bundle = await api.server(players=True, staff=True, queue=True, vehicles=True, emergency_calls=True)
+status = StatusBuilder(bundle).build()
+await channel.send(**DiscordFormatter().server_status(status).to_dict())
+```
+
+Important behavior:
+
+- output is plain dictionaries, not `discord.py` objects;
+- `@everyone` and `@here` are neutralized;
+- content, field, title, and description lengths are clipped to Discord limits.
+
 ## Analyzer
 
 Signature:
@@ -107,10 +151,15 @@ Minimal example:
 
 ```python
 from erlc_api.analytics import Analyzer
+from erlc_api.discord_tools import DiscordFormatter
+from erlc_api.status import StatusBuilder
 
 bundle = await api.server(all=True)
 summary = Analyzer(bundle).dashboard()
 print(summary.player_count, summary.players_by_team)
+
+status = StatusBuilder(bundle).build()
+payload = DiscordFormatter().server_status(status).to_dict()
 ```
 
 Important options:
@@ -212,9 +261,9 @@ with ERLC("server-key") as api:
 
 ## Related Pages
 
-- [Earlier in the guide: Ops Utilities Reference](./Ops-Utilities-Reference.md)
+- [Earlier in the guide: Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Next in the guide: Moderation Helpers](./Moderation-Helpers.md)
 
 ---
 
-[Previous Page: Ops Utilities Reference](./Ops-Utilities-Reference.md) | [Next Page: Moderation Helpers](./Moderation-Helpers.md)
+[Previous Page: Workflow Utilities Reference](./Workflow-Utilities-Reference.md) | [Next Page: Moderation Helpers](./Moderation-Helpers.md)

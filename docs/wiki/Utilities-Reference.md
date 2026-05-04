@@ -25,6 +25,28 @@ Optional dependencies are imported only when a method needs them:
 | `erlc-api.py[rich]` | `Formatter().rich_table(...)` |
 | `erlc-api.py[export]` | `Exporter(...).xlsx(...)` |
 | `erlc-api.py[time]` | `TimeTools().parse(..., enhanced=True)` |
+| `erlc-api.py[location]` | `MapRenderer().render_points(...)` |
+
+## Workflow Utilities
+
+`erlc-api.py` 2.3 adds workflow helpers for dashboards, bots, and multi-server
+apps. They are still explicit modules and do not load from top-level
+`import erlc_api`.
+
+| Module | Import | Purpose |
+| --- | --- | --- |
+| Location | `from erlc_api.location import LocationTools` | Distances, radius queries, nearest players, postal/street matching, official map URLs, optional map overlays. |
+| Bundle | `from erlc_api.bundle import AsyncBundle, Bundle` | Named and custom v2 `/server` include presets. |
+| Rules | `from erlc_api.rules import RuleEngine, Conditions` | Evaluate alert-style rules and return `RuleMatch` objects. |
+| Multi Server | `from erlc_api.multiserver import AsyncMultiServer, MultiServer` | Read multiple named servers with bounded concurrency and per-server errors. |
+| Discord Tools | `from erlc_api.discord_tools import DiscordFormatter` | Build plain dict Discord message/embed payloads without a Discord dependency. |
+| Diagnostics | `from erlc_api.diagnostics import diagnose_error` | Turn errors, rate limits, command results, and statuses into user-facing diagnostics. |
+| Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols. |
+| Status | `from erlc_api.status import AsyncStatus, StatusBuilder` | Typed dashboard status snapshots with `.to_dict()`. |
+| Command Flows | `from erlc_api.command_flows import CommandFlowBuilder` | Preview and validate command sequences without execution. |
+
+See [Workflow Utilities Reference](./Workflow-Utilities-Reference.md) for the
+full 2.3 workflow API.
 
 ## Ops Utilities
 

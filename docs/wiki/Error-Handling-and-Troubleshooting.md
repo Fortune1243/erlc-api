@@ -22,6 +22,36 @@ else:
 
 Catch specific exceptions first, then `ERLCError` as the shared base.
 
+## User-facing Diagnostics
+
+Use `erlc_api.diagnostics` when errors need to become bot replies, dashboard
+messages, or structured API responses:
+
+```python
+from erlc_api.diagnostics import diagnose_error
+
+try:
+    players = await api.players()
+except Exception as exc:
+    diagnostics = diagnose_error(exc)
+    print(diagnostics.to_dict())
+```
+
+For Discord bots, pair diagnostics with dependency-free Discord payload helpers:
+
+```python
+from erlc_api.discord_tools import DiscordFormatter
+
+try:
+    players = await api.players()
+except ERLCError as exc:
+    diagnostics = diagnose_error(exc)
+    await ctx.send(**DiscordFormatter().diagnostics(diagnostics).to_dict())
+```
+
+Diagnostics are for presentation. Keep typed exception handling for control
+flow.
+
 ## Common Exceptions
 
 | Exception | Typical cause | First check |
@@ -59,6 +89,24 @@ print(preview.raw["command"])
 If dry-run looks correct but PRC rejects the command, handle the specific
 command exception and show a user-facing message.
 
+Use command flows when a moderation tool needs to preview multiple commands
+before a human confirms them:
+
+```python
+from erlc_api.command_flows import CommandFlowBuilder
+
+flow = (
+    CommandFlowBuilder("warn-and-pm")
+    .step("warn Avi RDM")
+    .step("pm Avi Please read the rules")
+    .build()
+)
+
+print(flow.preview())
+```
+
+Flows validate and preview only. They never send commands.
+
 ## Troubleshooting Models
 
 If typed decoding fails:
@@ -77,12 +125,16 @@ sample. Do not log server keys or authorization headers.
 - Retrying every error as if it were a network failure.
 - Logging complete headers or request objects with secrets.
 - Assuming all non-200 responses are rate limits.
+- Treating diagnostics as a retry policy. They explain problems; they do not
+  retry requests.
+- Expecting command flows to execute commands automatically.
 
 ## Related Pages
 
 - [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
 - [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
 - [Security and Secrets](./Security-and-Secrets.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 
 ---
 

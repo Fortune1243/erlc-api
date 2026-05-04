@@ -18,8 +18,10 @@ Use FastAPI's `lifespan` context manager to start and close `AsyncERLC` alongsid
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from erlc_api import AsyncERLC, cmd
+from erlc_api.cache import AsyncCachedClient
 
-api = AsyncERLC("your-server-key")
+api = AsyncERLC("your-server-key", rate_limited=True)
+cached_api = AsyncCachedClient(api, ttl_s=5)
 
 
 @asynccontextmanager
@@ -39,7 +41,7 @@ app = FastAPI(lifespan=lifespan)
 ```python
 @app.get("/status")
 async def status():
-    info = await api.server()
+    info = await cached_api.server()
     return {
         "name": info.name,
         "players": info.current_players,
@@ -52,7 +54,7 @@ async def status():
 ```python
 @app.get("/players")
 async def players():
-    online = await api.players()
+    online = await cached_api.players()
     return [{"name": p.name, "team": p.team, "user_id": p.user_id} for p in online]
 ```
 
@@ -61,7 +63,7 @@ async def players():
 ```python
 @app.get("/staff")
 async def staff():
-    duty = (await api.staff()).members()
+    duty = (await cached_api.staff()).members
     return [{"name": m.name, "role": str(m.role)} for m in duty]
 ```
 
@@ -86,21 +88,50 @@ Convert API errors to proper HTTP responses using `HTTPException`.
 ```python
 from fastapi import HTTPException
 from erlc_api import AuthError, RateLimitError, ERLCError
+from erlc_api.diagnostics import diagnose_error
 
 @app.get("/status")
 async def status():
     try:
-        info = await api.server()
+        info = await cached_api.server()
         return {"name": info.name, "players": info.current_players, "max_players": info.max_players}
     except AuthError:
         raise HTTPException(status_code=401, detail="Invalid server key.")
     except RateLimitError as e:
-        raise HTTPException(status_code=429, detail=f"Rate limited. Retry after {e.retry_after:.0f}s.")
+        raise HTTPException(status_code=429, detail=diagnose_error(e).to_dict())
     except ERLCError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=502, detail=diagnose_error(e).to_dict())
 ```
 
-## 5. Running the server
+## 5. Dashboard helpers
+
+Use status, bundle presets, and multi-server helpers for routes that feed
+dashboards.
+
+```python
+from erlc_api.bundle import AsyncBundle
+from erlc_api.multiserver import AsyncMultiServer, ServerRef
+from erlc_api.status import StatusBuilder
+
+@app.get("/dashboard")
+async def dashboard():
+    bundle = await AsyncBundle(cached_api).dashboard()
+    return StatusBuilder(bundle).build().to_dict()
+
+servers = [
+    ServerRef("main", "main-server-key"),
+    ServerRef("training", "training-server-key"),
+]
+
+@app.get("/servers")
+async def servers_view():
+    return await AsyncMultiServer(cached_api, servers, concurrency=3).aggregate()
+```
+
+`AsyncCachedClient` is intentionally read-only for caching. Keep `POST`
+endpoints such as `/announce` calling `api.command(...)` directly.
+
+## 6. Running the server
 
 ```
 uvicorn main:app --reload
@@ -108,18 +139,21 @@ uvicorn main:app --reload
 
 The API will be available at `http://localhost:8000`. FastAPI generates interactive docs at `/docs` automatically.
 
-## 6. Common mistakes
+## 7. Common mistakes
 
 - **Using `@app.on_event("startup"/"shutdown")`.** These are deprecated in modern FastAPI. Use the `lifespan` context manager instead.
 - **Sharing one `AsyncERLC` instance across threads.** The client is not thread-safe; use it only within the async event loop FastAPI runs on.
 - **Returning model objects directly.** `erlc_api` models are dataclasses, not Pydantic models. Call `.to_dict()` or map fields manually before returning from a route.
 - **Not handling `RateLimitError`.** ERLC enforces per-endpoint limits. Without handling, FastAPI returns a 500 to the caller instead of a meaningful 429.
 - **Starting the client outside `lifespan`.** Calling `await api.start()` at module level runs before an event loop exists and will raise a runtime error.
+- **Using `api.server(all=True)` for every route.** Use bundle presets or explicit includes so hot paths only request what they need.
+- **Caching write endpoints.** Cache helpers skip `command(...)`; keep command routes explicit.
 
-## 7. Next steps
+## 8. Next steps
 
 - [Endpoint Reference](./Endpoint-Reference.md) — full list of available endpoints (`kill_logs`, `bans`, `vehicles`, etc.)
 - [Commands Reference](./Commands-Reference.md) — all supported in-game commands via `cmd.*`
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md) — cache, status, bundle presets, diagnostics, and multi-server helpers
 - [Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md) — receive in-game events pushed to your backend
 - [Waiters and Watchers](./Waiters-and-Watchers.md) — poll for changes and build live-update features
 

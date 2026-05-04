@@ -99,10 +99,32 @@ async def erlc_event_webhook(request: Request):
 1. Add role/permission checks before executing command handlers.
 2. Add idempotency keys for repeated webhook deliveries.
 3. Log command handler outcomes to your moderation audit tables.
+4. Use `erlc_api.cache.AsyncCachedClient` for read-only lookups inside handlers.
+5. Use `erlc_api.diagnostics` and `erlc_api.discord_tools` for readable handler failures.
+
+Example read-only cache inside a handler:
+
+```python
+from erlc_api.cache import AsyncCachedClient
+
+cached_api = AsyncCachedClient(api, ttl_s=5)
+
+@router.on_command("players")
+async def handle_players(command, event):
+    players = await cached_api.players()
+    return {"players": [player.name for player in players]}
+```
+
+Keep command execution explicit through the original client:
+
+```python
+result = await api.command("h hello")
+```
 
 ## Related Pages
 
 - [Earlier in the guide: Webhooks Reference](./Webhooks-Reference.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Next in the guide: Custom Commands Reference](./Custom-Commands-Reference.md)
 
 ---

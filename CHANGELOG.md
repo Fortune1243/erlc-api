@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.3.0 - 2026-05-04
+
+- Added lazy workflow utility modules: `location`, `bundle`, `rules`, `multiserver`, `discord_tools`, `diagnostics`, `cache`, `status`, and `command_flows`.
+- Added bundle presets, typed status summaries, dependency-free Discord payload builders, memory TTL caching, command-flow previews, and multi-server read aggregation.
+- Added optional Pillow-backed map rendering behind `erlc-api.py[location]`.
+- Fixed dynamic rate-limiter retry-after windows so observed cooldowns expire correctly.
+- Kept workflow utilities outside top-level `erlc_api` imports and avoided new base dependencies.
+
 ## 2.2.0 - 2026-05-03
 
 - Added opt-in dynamic client rate limiting with `rate_limited=True`.

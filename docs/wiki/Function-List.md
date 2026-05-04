@@ -55,6 +55,15 @@ All methods accept `server_key=` and `raw=True`.
 - `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter`
 - `from erlc_api.error_codes import explain_error_code, list_error_codes`
 - `from erlc_api.custom_commands import CustomCommandRouter`
+- `from erlc_api.location import LocationTools, MapRenderer`
+- `from erlc_api.bundle import AsyncBundle, Bundle, BundleRequest`
+- `from erlc_api.rules import RuleEngine, AsyncRuleEngine, Conditions`
+- `from erlc_api.multiserver import AsyncMultiServer, MultiServer, ServerRef`
+- `from erlc_api.discord_tools import DiscordFormatter, DiscordEmbed`
+- `from erlc_api.diagnostics import diagnose_error, diagnose_status`
+- `from erlc_api.cache import AsyncCachedClient, CachedClient, MemoryCache`
+- `from erlc_api.status import AsyncStatus, Status, StatusBuilder`
+- `from erlc_api.command_flows import CommandFlowBuilder, CommandTemplate`
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.
 
 Utilities are not imported by top-level `import erlc_api`.

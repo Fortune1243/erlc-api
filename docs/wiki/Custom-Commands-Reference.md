@@ -65,6 +65,17 @@ Common mistakes:
   `erlc_api.webhooks.assert_valid_event_webhook_signature`.
 - Expecting a Discord dependency. This module returns plain Python objects.
 
+For Discord bots or webhooks that want embed-style output, return plain payloads
+from `erlc_api.discord_tools` yourself:
+
+```python
+from erlc_api.discord_tools import DiscordMessage
+
+@router.command("ping")
+async def ping(ctx):
+    return DiscordMessage(content="pong").to_dict()
+```
+
 ## CustomCommandContext
 
 Fields and helpers:
@@ -184,9 +195,36 @@ async def announce(ctx):
     return ctx.reply(result.message or "sent")
 ```
 
+## Command-flow previews in handlers
+
+Use command flows when a custom command should prepare multiple PRC commands but
+not execute them immediately.
+
+```python
+from erlc_api.command_flows import CommandFlowBuilder
+
+@router.command("previewwarn")
+async def preview_warn(ctx):
+    target = ctx.arg(0)
+    reason = ctx.rest(1)
+    if not target or not reason:
+        return ctx.reply("usage: ;previewwarn <player> <reason>")
+    flow = (
+        CommandFlowBuilder("warn-preview")
+        .step(f"warn {target} {reason}")
+        .step(f"pm {target} Please review the rules")
+        .build()
+    )
+    return ctx.reply("\n".join(flow.preview()))
+```
+
+Handlers remain flexible: they can return `CustomCommandResponse`, dicts,
+strings, Discord payload dictionaries, or your framework's own response type.
+
 ## Related Pages
 
 - [Earlier in the guide: Event Webhooks and Custom Commands](./Event-Webhooks-and-Custom-Commands.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Next in the guide: Security and Secrets](./Security-and-Secrets.md)
 
 ---

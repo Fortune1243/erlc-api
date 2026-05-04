@@ -167,9 +167,10 @@ custom command router.
 ## Related Pages
 
 - [Utilities Reference](./Utilities-Reference.md)
+- [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Custom Commands Reference](./Custom-Commands-Reference.md)
 - [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
 
 ---
 
-[Previous Page: Utilities Reference](./Utilities-Reference.md) | [Next Page: Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md)
+[Previous Page: Utilities Reference](./Utilities-Reference.md) | [Next Page: Workflow Utilities Reference](./Workflow-Utilities-Reference.md)

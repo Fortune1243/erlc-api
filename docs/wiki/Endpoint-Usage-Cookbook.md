@@ -12,12 +12,29 @@ bundle = await api.server(players=True, queue=True, staff=True)
 
 players = bundle.players or []
 queue = bundle.queue or []
-staff = bundle.staff.members() if bundle.staff else []
+staff = bundle.staff.members if bundle.staff else []
 ```
 
 Return type: `ServerBundle`.
 
 Use this for status panels, staff dashboards, and periodic snapshots.
+
+For reusable dashboard fetches, use the 2.3 bundle preset helper:
+
+```python
+from erlc_api.bundle import AsyncBundle
+
+bundle = await AsyncBundle(api).dashboard()
+```
+
+To turn that bundle into a dashboard-ready object:
+
+```python
+from erlc_api.status import StatusBuilder
+
+status = StatusBuilder(bundle).build()
+return status.to_dict()
+```
 
 ## Full Server Bundle
 
@@ -29,6 +46,35 @@ bundle = await api.server(all=True)
 
 This is convenient, but it can request more data than a command handler needs.
 Prefer explicit include flags in hot paths.
+
+## Cached Reads
+
+For bot commands and web dashboards that repeat the same reads, wrap the client
+with a short memory TTL cache:
+
+```python
+from erlc_api.cache import AsyncCachedClient
+
+cached = AsyncCachedClient(api, ttl_s=5)
+players = await cached.players()
+```
+
+The cache applies to read endpoints only. Commands are never cached.
+
+## Multi-server Overview
+
+```python
+from erlc_api.multiserver import AsyncMultiServer, ServerRef
+
+servers = [
+    ServerRef("main", "main-key"),
+    ServerRef("training", "training-key"),
+]
+
+summary = await AsyncMultiServer(api, servers, concurrency=3).aggregate()
+```
+
+Use this for fleet dashboards. Results collect per-server errors by default.
 
 ## Player Lookup
 
@@ -112,18 +158,38 @@ Return type: decoded JSON when possible, otherwise response text.
 from erlc_api.analytics import Analyzer
 from erlc_api.export import Exporter
 from erlc_api.find import Finder
+from erlc_api.location import LocationTools
 
-bundle = await api.server(all=True)
+bundle = await api.server(players=True, vehicles=True, emergency_calls=True)
 player = Finder(bundle).player("Avi")
 summary = Analyzer(bundle).dashboard()
 markdown = Exporter(summary).markdown()
+if bundle.emergency_calls:
+    nearest = LocationTools(bundle).nearest_players_to_call(bundle.emergency_calls[0], limit=3)
 ```
 
 Utilities stay lazy. Import only the modules you need.
 
+## Alert Rules
+
+Use rules when application code needs reusable alert conditions:
+
+```python
+from erlc_api.rules import RuleEngine, Conditions
+
+engine = RuleEngine()
+engine.add("queue-active", Conditions.queue_length(at_least=1), severity="info")
+matches = engine.evaluate(bundle)
+```
+
+Rules return matches and optional callback results. They do not execute PRC
+commands.
+
 ## Common Mistakes
 
 - Calling `server(all=True)` inside every high-frequency command handler.
+- Forgetting that multi-server helpers are read-only and will reject `command`.
+- Caching reads for too long on fast-changing dashboards.
 - Using `raw=True` everywhere and losing model helpers.
 - Reimplementing filters and finders in bot code instead of using lazy utility
   modules.
