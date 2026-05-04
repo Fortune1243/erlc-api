@@ -1,9 +1,10 @@
 # Rate Limits, Retries, and Reliability
 
 The wrapper keeps reliability behavior intentionally small. It parses PRC
-rate-limit metadata, raises typed errors, and optionally performs one safe retry
-on `429`. It does not include cache backends, circuit breakers, tracing,
-metrics sinks, request replay, or request coalescing.
+rate-limit metadata, raises typed errors, optionally performs one safe retry on
+`429`, and can opt in to dynamic pre-request limiting with `rate_limited=True`.
+It does not include cache backends, circuit breakers, tracing, metrics sinks,
+request replay, or request coalescing.
 
 ## Request Headers
 
@@ -53,6 +54,39 @@ Disable the built-in retry when your app has its own scheduler:
 api = AsyncERLC("server-key", retry_429=False)
 ```
 
+## Dynamic Rate Limiter
+
+Enable dynamic limiting when your app polls or has bursty command handlers:
+
+```python
+api = AsyncERLC("server-key", rate_limited=True)
+```
+
+Behavior:
+
+- learns from `X-RateLimit-*` and `Retry-After` headers on every response;
+- waits before requests when an observed bucket has no remaining capacity until
+  reset;
+- updates state from actual `429` responses;
+- tracks global-key requests separately from server-key-only requests;
+- stores state in memory only.
+
+Inspect current state:
+
+```python
+snapshot = api.rate_limits
+if snapshot is not None:
+    print(snapshot.to_dict())
+```
+
+Use `erlc_api.ratelimit` directly only for custom transports:
+
+```python
+from erlc_api.ratelimit import AsyncRateLimiter
+
+limiter = AsyncRateLimiter()
+```
+
 ## Polling Guidance
 
 Use `erlc_api.limits` for conservative planning:
@@ -73,6 +107,7 @@ The wrapper handles:
 - decoding successful responses;
 - mapping known error codes to typed exceptions;
 - parsing rate-limit metadata;
+- optional dynamic pre-request waiting when `rate_limited=True`;
 - closing sync and async HTTP clients.
 
 Your application should handle:
@@ -86,6 +121,7 @@ Your application should handle:
 
 - Running many watchers at one-second intervals across multiple servers.
 - Treating `retry_429=True` as a full retry policy.
+- Expecting `rate_limited=True` to coordinate multiple Python processes.
 - Swallowing `RateLimitError` without slowing future calls.
 - Assuming advisory `safe_interval()` values are official PRC limits.
 

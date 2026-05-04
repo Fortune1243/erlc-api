@@ -2,8 +2,8 @@
 
 ## Clients
 
-- `AsyncERLC(server_key=None, global_key=None)`
-- `ERLC(server_key=None, global_key=None)`
+- `AsyncERLC(server_key=None, global_key=None, rate_limited=False)`
+- `ERLC(server_key=None, global_key=None, rate_limited=False)`
 - `start()` / `close()`
 - async and sync context-manager support
 - `validate_key()` / `health_check()`
@@ -52,6 +52,8 @@ All methods accept `server_key=` and `raw=True`.
 - `from erlc_api.audit import AuditEvent, AuditLog`
 - `from erlc_api.idempotency import MemoryDeduper, FileDeduper`
 - `from erlc_api.limits import PollPlan, poll_plan, safe_interval`
+- `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter`
+- `from erlc_api.error_codes import explain_error_code, list_error_codes`
 - `from erlc_api.custom_commands import CustomCommandRouter`
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.
 

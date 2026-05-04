@@ -11,21 +11,7 @@ from typing import Any, Mapping
 import httpx
 
 from ._constants import BASE_URL, DEFAULT_TIMEOUT_S
-from ._errors import (
-    APIError,
-    AuthError,
-    BadRequestError,
-    InvalidCommandError,
-    ModuleOutdatedError,
-    NetworkError,
-    NotFoundError,
-    PermissionDeniedError,
-    ProhibitedMessageError,
-    RateLimitError,
-    RestrictedCommandError,
-    RobloxCommunicationError,
-    ServerOfflineError,
-)
+from ._errors import APIError, NetworkError, RateLimitError
 
 
 def _default_user_agent() -> str:
@@ -133,33 +119,16 @@ def _rate_limit_error(method: str, path: str, resp: httpx.Response, raw: Any) ->
 
 
 def _map_error(method: str, path: str, status: int, raw: Any) -> APIError:
+    from ._error_codes import exception_for_error_code
+
     code = _error_code(raw)
     message = _message_from_body(raw) or "PRC API request failed"
+    exc_type = exception_for_error_code(code, status=status)
 
-    if status == 404:
-        return NotFoundError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if status == 429 or code == 4001:
+    if exc_type is RateLimitError:
         dummy = httpx.Response(status, json=raw if raw is not None else {})
         return _rate_limit_error(method, path, dummy, raw)
-    if status == 403 or code in {2000, 2001, 2002, 2003, 2004}:
-        return AuthError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 3001:
-        return InvalidCommandError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 3002 or status == 422:
-        return ServerOfflineError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 4002:
-        return RestrictedCommandError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 4003:
-        return ProhibitedMessageError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 9998:
-        return PermissionDeniedError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code == 9999:
-        return ModuleOutdatedError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if code in {1001, 1002} or status >= 500:
-        return RobloxCommunicationError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    if status == 400:
-        return BadRequestError(message, method=method, path=path, status=status, body=raw, error_code=code)
-    return APIError(message, method=method, path=path, status=status, body=raw, error_code=code)
+    return exc_type(message, method=method, path=path, status=status, body=raw, error_code=code)
 
 
 def _build_headers(*, server_key: str, global_key: str | None, headers: Mapping[str, str] | None) -> dict[str, str]:
@@ -186,10 +155,15 @@ def _decode_response(resp: httpx.Response) -> Any:
         return resp.text
 
 
+def _key_scope(global_key: str | None) -> str:
+    return "global" if global_key else "server"
+
+
 class AsyncTransport:
-    def __init__(self, settings: ClientSettings, *, global_key: str | None = None) -> None:
+    def __init__(self, settings: ClientSettings, *, global_key: str | None = None, rate_limiter: Any = None) -> None:
         self.settings = settings
         self.global_key = global_key
+        self.rate_limiter = rate_limiter
         self._client: httpx.AsyncClient | None = None
 
     async def start(self) -> None:
@@ -225,8 +199,11 @@ class AsyncTransport:
         await self.start()
         method_u = method.upper()
         request_headers = _build_headers(server_key=server_key, global_key=self.global_key, headers=headers)
+        key_scope = _key_scope(self.global_key)
 
         for attempt in range(2):
+            if self.rate_limiter is not None:
+                await self.rate_limiter.before_request(method_u, path, key_scope=key_scope)
             try:
                 resp = await self.client.request(
                     method_u,
@@ -238,18 +215,24 @@ class AsyncTransport:
             except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError) as exc:
                 raise NetworkError(f"Network error: {exc}", method=method_u, path=path) from exc
 
+            if self.rate_limiter is not None:
+                self.rate_limiter.after_response(method_u, path, resp.headers, key_scope=key_scope)
+
             if 200 <= resp.status_code < 300:
                 return _decode_response(resp)
 
             raw = _safe_json(resp)
             if resp.status_code == 429:
                 err = _rate_limit_error(method_u, path, resp, raw)
+                if self.rate_limiter is not None:
+                    self.rate_limiter.after_error(err, method=method_u, path=path, key_scope=key_scope)
                 if self.settings.retry_429 and attempt == 0:
                     sleep_s = err.retry_after
                     if sleep_s is None and err.reset_epoch_s is not None:
                         sleep_s = max(0.0, err.reset_epoch_s - time.time())
                     if sleep_s is not None:
-                        await asyncio.sleep(sleep_s)
+                        if self.rate_limiter is None:
+                            await asyncio.sleep(sleep_s)
                         continue
                 raise err
             raise _map_error(method_u, path, resp.status_code, raw)
@@ -258,9 +241,10 @@ class AsyncTransport:
 
 
 class SyncTransport:
-    def __init__(self, settings: ClientSettings, *, global_key: str | None = None) -> None:
+    def __init__(self, settings: ClientSettings, *, global_key: str | None = None, rate_limiter: Any = None) -> None:
         self.settings = settings
         self.global_key = global_key
+        self.rate_limiter = rate_limiter
         self._client: httpx.Client | None = None
 
     def start(self) -> None:
@@ -296,8 +280,11 @@ class SyncTransport:
         self.start()
         method_u = method.upper()
         request_headers = _build_headers(server_key=server_key, global_key=self.global_key, headers=headers)
+        key_scope = _key_scope(self.global_key)
 
         for attempt in range(2):
+            if self.rate_limiter is not None:
+                self.rate_limiter.before_request(method_u, path, key_scope=key_scope)
             try:
                 resp = self.client.request(
                     method_u,
@@ -309,18 +296,24 @@ class SyncTransport:
             except (httpx.TimeoutException, httpx.NetworkError, httpx.RequestError) as exc:
                 raise NetworkError(f"Network error: {exc}", method=method_u, path=path) from exc
 
+            if self.rate_limiter is not None:
+                self.rate_limiter.after_response(method_u, path, resp.headers, key_scope=key_scope)
+
             if 200 <= resp.status_code < 300:
                 return _decode_response(resp)
 
             raw = _safe_json(resp)
             if resp.status_code == 429:
                 err = _rate_limit_error(method_u, path, resp, raw)
+                if self.rate_limiter is not None:
+                    self.rate_limiter.after_error(err, method=method_u, path=path, key_scope=key_scope)
                 if self.settings.retry_429 and attempt == 0:
                     sleep_s = err.retry_after
                     if sleep_s is None and err.reset_epoch_s is not None:
                         sleep_s = max(0.0, err.reset_epoch_s - time.time())
                     if sleep_s is not None:
-                        time.sleep(sleep_s)
+                        if self.rate_limiter is None:
+                            time.sleep(sleep_s)
                         continue
                 raise err
             raise _map_error(method_u, path, resp.status_code, raw)

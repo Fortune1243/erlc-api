@@ -20,6 +20,7 @@ AsyncERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
+    rate_limited: bool = False,
     user_agent: str | None = None,
 )
 ```
@@ -47,6 +48,7 @@ Important options:
 | `base_url` | Override API base URL for tests or custom gateways. |
 | `timeout_s` | HTTP timeout in seconds. |
 | `retry_429` | Sleep once and retry once on rate limits when retry timing is available. |
+| `rate_limited` | Opt in to dynamic pre-request throttling based on PRC rate-limit headers. |
 | `user_agent` | Override default `erlc-api-python/<version>` user agent. |
 
 Common mistakes:
@@ -67,6 +69,7 @@ ERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
+    rate_limited: bool = False,
     user_agent: str | None = None,
 )
 ```
@@ -115,6 +118,22 @@ finally:
 
 Endpoint methods auto-start the underlying HTTP client if needed. Explicit
 startup is still useful for app startup hooks and repeated calls.
+
+## Dynamic Rate Limiting
+
+`retry_429=True` reacts after PRC returns a rate limit. `rate_limited=True`
+learns from successful and failed response headers and waits before avoidable
+requests:
+
+```python
+api = AsyncERLC("server-key", rate_limited=True)
+players = await api.players()
+snapshot = api.rate_limits
+```
+
+`api.rate_limits` returns a `RateLimitSnapshot` when dynamic limiting is enabled,
+or `None` when it is disabled. Global-key clients and server-key-only clients
+are tracked in separate scopes.
 
 ## Authentication Headers
 

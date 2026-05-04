@@ -122,6 +122,24 @@ def _include_params(
     return {param: "true" for key, param in _V2_INCLUDE_PARAMS.items() if selected[key]}
 
 
+def _configure_async_rate_limiter(transport: AsyncTransport, enabled: bool) -> None:
+    if not enabled:
+        return
+    if getattr(transport, "rate_limiter", None) is None:
+        from .ratelimit import AsyncRateLimiter
+
+        transport.rate_limiter = AsyncRateLimiter()
+
+
+def _configure_sync_rate_limiter(transport: SyncTransport, enabled: bool) -> None:
+    if not enabled:
+        return
+    if getattr(transport, "rate_limiter", None) is None:
+        from .ratelimit import RateLimiter
+
+        transport.rate_limiter = RateLimiter()
+
+
 class AsyncERLC:
     """Async, flat, v2-first PRC API wrapper."""
 
@@ -133,6 +151,7 @@ class AsyncERLC:
         base_url: str = "https://api.policeroleplay.community",
         timeout_s: float = 20.0,
         retry_429: bool = True,
+        rate_limited: bool = False,
         user_agent: str | None = None,
         transport: AsyncTransport | None = None,
     ) -> None:
@@ -140,6 +159,13 @@ class AsyncERLC:
         self.global_key = global_key.strip() if isinstance(global_key, str) else global_key
         self.settings = _settings(base_url=base_url, timeout_s=timeout_s, retry_429=retry_429, user_agent=user_agent)
         self._transport = transport or AsyncTransport(self.settings, global_key=self.global_key)
+        self.rate_limited = rate_limited
+        _configure_async_rate_limiter(self._transport, rate_limited)
+
+    @property
+    def rate_limits(self) -> Any:
+        limiter = getattr(self._transport, "rate_limiter", None)
+        return limiter.snapshot() if limiter is not None else None
 
     async def start(self) -> None:
         await self._transport.start()
@@ -298,6 +324,7 @@ class ERLC:
         base_url: str = "https://api.policeroleplay.community",
         timeout_s: float = 20.0,
         retry_429: bool = True,
+        rate_limited: bool = False,
         user_agent: str | None = None,
         transport: SyncTransport | None = None,
     ) -> None:
@@ -305,6 +332,13 @@ class ERLC:
         self.global_key = global_key.strip() if isinstance(global_key, str) else global_key
         self.settings = _settings(base_url=base_url, timeout_s=timeout_s, retry_429=retry_429, user_agent=user_agent)
         self._transport = transport or SyncTransport(self.settings, global_key=self.global_key)
+        self.rate_limited = rate_limited
+        _configure_sync_rate_limiter(self._transport, rate_limited)
+
+    @property
+    def rate_limits(self) -> Any:
+        limiter = getattr(self._transport, "rate_limiter", None)
+        return limiter.snapshot() if limiter is not None else None
 
     def start(self) -> None:
         self._transport.start()

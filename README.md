@@ -79,6 +79,7 @@ AsyncERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
+    rate_limited: bool = False,
     user_agent: str | None = None,
 )
 ```
@@ -96,6 +97,7 @@ ERLC(
     base_url: str = "https://api.policeroleplay.community",
     timeout_s: float = 20.0,
     retry_429: bool = True,
+    rate_limited: bool = False,
     user_agent: str | None = None,
 )
 ```
@@ -236,6 +238,8 @@ models, errors, and `cmd`.
 | Audit | `from erlc_api.audit import AuditLog` | JSON-safe audit events for commands, webhooks, watchers, and moderation |
 | Idempotency | `from erlc_api.idempotency import MemoryDeduper, FileDeduper` | TTL dedupe for webhook deliveries and watcher restarts |
 | Limits | `from erlc_api.limits import poll_plan, safe_interval` | Conservative polling guidance without fake PRC limit claims |
+| Rate Limit | `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter` | Dynamic in-memory limiter used by `rate_limited=True` |
+| Error Codes | `from erlc_api.error_codes import explain_error_code` | Explain PRC error codes and wrapper exception mappings |
 | Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Framework-neutral router for PRC webhook messages starting with `;` |
 
 Example:
@@ -316,6 +320,14 @@ On `429`, `RateLimitError` exposes:
 
 By default `retry_429=True`, so the transport sleeps once and retries once when
 it has retry timing. Set `retry_429=False` to handle rate limits yourself.
+
+Pass `rate_limited=True` to enable the opt-in dynamic limiter. It learns from
+PRC rate-limit headers and waits before avoidable requests:
+
+```python
+api = AsyncERLC("server-key", rate_limited=True)
+print(api.rate_limits)
+```
 
 ## Documentation Deep Dives
 

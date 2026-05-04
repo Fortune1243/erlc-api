@@ -96,6 +96,43 @@ plan = poll_plan(server_count=2, endpoint_count=3, timeout_s=120)
 
 These helpers are advisory. They are not official PRC rate-limit enforcement.
 
+## Dynamic Rate Limiting
+
+Imports:
+
+```python
+from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter
+```
+
+Purpose: track PRC rate-limit headers in memory and wait before avoidable
+requests. Most users should enable it through the client:
+
+```python
+api = AsyncERLC("server-key", rate_limited=True)
+await api.players()
+print(api.rate_limits.to_dict())
+```
+
+Use the public limiter classes directly only when building custom transports.
+Limiter state is process-local and memory-only.
+
+## Error Codes
+
+Import:
+
+```python
+from erlc_api.error_codes import explain_error_code, list_error_codes
+```
+
+Purpose: explain PRC error codes without needing to trigger a failed request.
+
+```python
+info = explain_error_code(4001)
+print(info.exception.__name__, info.retryable, info.advice)
+```
+
+The HTTP transport uses the same mapping table for typed exceptions.
+
 ## Custom Commands
 
 Import:
@@ -121,6 +158,8 @@ custom command router.
 ## Common Mistakes
 
 - Treating `safe_interval()` as an official PRC limit.
+- Expecting `rate_limited=True` to coordinate across multiple processes.
+- Treating error-code advice as a replacement for catching typed exceptions.
 - Using in-memory dedupe when duplicate protection must survive restarts.
 - Logging secrets inside audit metadata.
 - Making custom command handlers depend on a specific web or Discord framework.

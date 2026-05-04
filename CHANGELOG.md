@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.2.0 - 2026-05-03
+
+- Added opt-in dynamic client rate limiting with `rate_limited=True`.
+- Added lazy `ratelimit` utilities for response-header-driven limiter state.
+- Added lazy `error_codes` utilities for explaining PRC error codes and exception mappings.
+- Reused the public error-code table for internal transport exception mapping.
+
 ## 2.1.0 - 2026-05-03
 
 - Added ops utility modules: `snapshot`, `audit`, `idempotency`, and `limits`.

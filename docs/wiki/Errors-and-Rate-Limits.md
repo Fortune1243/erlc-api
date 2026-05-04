@@ -76,8 +76,35 @@ The transport maps PRC error codes when present:
 | Status `400` | `BadRequestError` |
 | Anything else non-success | `APIError` |
 
+The same table is public:
+
+```python
+from erlc_api.error_codes import explain_error_code
+
+info = explain_error_code(4001)
+print(info.name, info.exception.__name__, info.advice)
+```
+
 Common mistake: treating PRC error codes as stable business logic in your app.
 Use wrapper exception classes where possible and log raw codes for diagnostics.
+
+## Error-code Utility
+
+Import:
+
+```python
+from erlc_api.error_codes import exception_for_error_code, explain_error_code, list_error_codes
+```
+
+Public helpers:
+
+| Helper | Return type | Purpose |
+| --- | --- | --- |
+| `explain_error_code(code_or_error)` | `ErrorCodeInfo | None` | Explain a code, mapping, exception, retry flag, and advice. |
+| `list_error_codes(category=None)` | `list[ErrorCodeInfo]` | List known codes, optionally by category. |
+| `exception_for_error_code(code, status=None)` | `type[APIError]` | Return the wrapper exception class for a code/status. |
+
+`ErrorCodeInfo.to_dict()` returns JSON-safe data for dashboards or docs.
 
 ## RateLimitError
 
@@ -108,6 +135,8 @@ Important behavior:
 - The client retries at most once.
 - It sleeps only when `Retry-After`, body retry data, or reset time provide timing.
 - If the second attempt is also rate-limited, `RateLimitError` is raised.
+- `rate_limited=True` is separate and waits before requests using observed
+  headers.
 
 Disable automatic retry:
 

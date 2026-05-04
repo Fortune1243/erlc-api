@@ -41,6 +41,8 @@ names = [
     "erlc_api.idempotency",
     "erlc_api.limits",
     "erlc_api.custom_commands",
+    "erlc_api.ratelimit",
+    "erlc_api.error_codes",
     "erlc_api.webhooks",
 ]
 print(json.dumps([name for name in names if name in sys.modules]))

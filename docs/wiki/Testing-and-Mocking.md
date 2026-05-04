@@ -86,6 +86,41 @@ Keep polling intervals tiny in tests and timeouts short.
 For extras, assert helpful errors when dependencies are missing. Do not import
 optional libraries at module import time in utility modules.
 
+## Rate Limiter Tests
+
+Use injected clocks and sleep functions to avoid real delays:
+
+```python
+from erlc_api.ratelimit import RateLimiter
+
+now = 100.0
+sleeps = []
+
+limiter = RateLimiter(now=lambda: now, sleep=sleeps.append)
+limiter.after_response(
+    "GET",
+    "/v2/server",
+    {"X-RateLimit-Bucket": "global", "X-RateLimit-Remaining": "0", "X-RateLimit-Reset": "105"},
+)
+
+assert limiter.before_request("GET", "/v2/server") == 5.0
+```
+
+For client integration tests, pass fake transports and enable
+`rate_limited=True`.
+
+## Error Code Tests
+
+```python
+from erlc_api.error_codes import explain_error_code
+
+info = explain_error_code(4001)
+assert info.retryable is True
+```
+
+Also assert that top-level `import erlc_api` does not import
+`erlc_api.error_codes` or `erlc_api.ratelimit`.
+
 ## Common Mistakes
 
 - Calling the live PRC API from unit tests.
