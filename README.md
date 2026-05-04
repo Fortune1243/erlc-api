@@ -3,19 +3,49 @@
 [![PyPI](https://img.shields.io/pypi/v/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![Python](https://img.shields.io/pypi/pyversions/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![License](https://img.shields.io/badge/license-Custom_Attribution-blue)](LICENSE)
+[![Last Commit](https://img.shields.io/github/last-commit/Fortune1243/erlc-api)](https://github.com/Fortune1243/erlc-api)
 
-Lightweight Python wrapper for the **ER:LC PRC API**. Version 2 is a v2-first
-release with flat sync and async clients, typed dataclass responses by default,
-safe rate-limit handling, flexible commands, and explicit utility modules that
-only load when you import them.
+The most complete Python wrapper for the **ER:LC PRC API**. The only library
+with both sync and async clients, a command safety policy system, 14 typed
+exception classes, and 30+ production utility modules — built for bots and
+dashboards that have to be correct, not just functional.
 
 Install the PyPI package as `erlc-api.py`; import it in Python as `erlc_api`.
+
+## Why erlc-api.py
+
+- **Only ERLC wrapper with both sync + async** — `ERLC` and `AsyncERLC` share
+  identical method names, so scripts, Discord bots, and FastAPI apps use the
+  same library.
+- **14 typed exceptions** — catch `RateLimitError`, `RestrictedCommandError`,
+  `ServerOfflineError`, and 11 more without pattern-matching error strings.
+- **`CommandPolicy`** — the only command safety system in any ERLC Python
+  library; define an allowlist, cap length, and dry-run before any HTTP is sent.
+- **30+ lazy utility modules** — analytics, export (CSV/JSON/HTML/XLSX), rules
+  engine, moderation helpers, Discord embed builders, multi-server aggregation,
+  and more; none load unless you import them.
+- **Frozen dataclass responses** — typed, immutable, thread-safe by default,
+  with `.raw`, `.extra`, and `.to_dict()` on every model.
+- **Per-request `server_key=`** — one client instance, any number of servers.
+
+[Full comparison with other ER:LC wrappers →](comparison.md)
+
+## Highlights
+
+- Sync `ERLC` and async `AsyncERLC` clients with the same flat method names.
+- Typed frozen dataclasses with `.raw`, `.extra`, and `.to_dict()`.
+- v2-first coverage for players, locations, wanted stars, vehicles, emergency calls, and commands.
+- Dynamic rate limiting on by default, plus explicit read caching when you choose it.
+- Vehicle catalog/tools, permission levels, command metadata, and safe command policy helpers.
+- Lazy utility modules: import only the tools your bot, script, or dashboard needs.
 
 ## Install And Extras
 
 ```bash
 pip install erlc-api.py
 ```
+
+Requires Python `>=3.11`.
 
 Development install:
 
@@ -84,6 +114,41 @@ with ERLC("server-key") as api:
     players = api.players()
     result = api.command(policy.validate("h Hello"), dry_run=True)
     print(len(players), result.message)
+```
+
+Multi-server reads:
+
+```python
+from erlc_api import AsyncERLC
+from erlc_api.multiserver import AsyncMultiServer, ServerRef
+
+servers = [
+    ServerRef("main", "main-server-key"),
+    ServerRef("training", "training-server-key"),
+]
+
+async with AsyncERLC() as api:
+    summary = await AsyncMultiServer(api, servers, concurrency=3).aggregate()
+    print(summary["servers"], summary["players"])
+```
+
+Webhook custom commands:
+
+```python
+from erlc_api.custom_commands import CustomCommandRouter
+from erlc_api.webhooks import assert_valid_event_webhook_signature
+
+router = CustomCommandRouter(prefix=";")
+
+
+@router.command("ping")
+async def ping(ctx):
+    return ctx.reply("pong")
+
+
+async def handle_webhook(raw_body, headers, payload):
+    assert_valid_event_webhook_signature(raw_body=raw_body, headers=headers)
+    return await router.dispatch(payload)
 ```
 
 ## Safe Defaults
@@ -290,7 +355,9 @@ Key models:
 | `Player` | `players()` | `player`, `name`, `user_id`, `permission`, `callsign`, `team`, `location` |
 | `StaffList` | `staff()` | `co_owners`, `admins`, `mods`, `helpers`, `.members` |
 | `CommandLogEntry` | `command_logs()` | `player`, `name`, `user_id`, `timestamp`, `command` |
-| `CommandResult` | `command()` | `message`, `success` |
+| `Vehicle` | `vehicles()` | `name`, `model_name`, `year`, `owner_name`, `plate`, `color` |
+| `EmergencyCall` | `emergency_calls()` | `team`, `caller`, `players`, `position`, `started_at` |
+| `CommandResult` | `command()` | `message`, `success`, `command_id` |
 
 ```python
 players = await api.players()
@@ -299,6 +366,15 @@ first = players[0]
 print(first.name, first.user_id)
 print(first.extra)
 print(first.to_dict())
+```
+
+Permission strings stay raw for compatibility, with ordered enum helpers:
+
+```python
+from erlc_api import PermissionLevel
+
+if first.permission_level >= PermissionLevel.MOD:
+    print("staff-capable player")
 ```
 
 Parse PRC `PlayerName:Id` strings directly:
@@ -318,33 +394,20 @@ models, errors, and `cmd`.
 | --- | --- | --- |
 | Find | `from erlc_api.find import Finder` | Look up players, staff, vehicles, logs, bans, and calls |
 | Filter | `from erlc_api.filter import Filter` | Chain filters and return `.all()`, `.first()`, `.count()` |
-| Sort | `from erlc_api.sort import Sorter` | Sort by name, timestamp, team, permission, queue position, vehicle fields |
-| Group | `from erlc_api.group import Grouper` | Group by team, permission, role, owner, command, day, hour |
-| Diff | `from erlc_api.diff import Differ` | Compare lists or full server bundles |
-| Wait | `from erlc_api.wait import AsyncWaiter, Waiter` | Poll until joins, leaves, queue changes, logs, or counts occur |
 | Watch | `from erlc_api.watch import AsyncWatcher, Watcher` | Stream snapshot diffs as events and callbacks |
-| Format | `from erlc_api.format import Formatter` | Compact Discord-safe, console-safe, and rich text formatting |
+| Vehicles | `from erlc_api.vehicles import VehicleTools` | Vehicle catalog, model/year parsing, plates, owners, summaries |
+| Emergency | `from erlc_api.emergency import EmergencyCallTools` | Active/unresponded calls, team filters, nearest-call helpers |
+| Multi Server | `from erlc_api.multiserver import AsyncMultiServer, MultiServer` | Read and aggregate multiple named servers with bounded concurrency |
+| Discord Tools | `from erlc_api.discord_tools import DiscordFormatter` | Dependency-free Discord embed/message payload dictionaries |
+| Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols |
+| Rules | `from erlc_api.rules import RuleEngine, Conditions` | Evaluate flexible alert rules and return matches/callback results |
 | Analytics | `from erlc_api.analytics import Analyzer` | Dashboard summaries, distributions, command usage, moderation trends |
 | Export | `from erlc_api.export import Exporter` | JSON, CSV, Markdown, HTML, optional XLSX |
 | Moderation | `from erlc_api.moderation import AsyncModerator, Moderator` | Safe command composition, previews, audit messages |
-| Time | `from erlc_api.time import TimeTools` | Timestamp parsing, age strings, windows, timezone formatting |
-| Schema | `from erlc_api.schema import SchemaInspector` | Field discovery, raw/extra inspection, payload diagnostics |
-| Snapshot | `from erlc_api.snapshot import SnapshotStore` | JSONL snapshot persistence and latest-state comparisons |
-| Audit | `from erlc_api.audit import AuditLog` | JSON-safe audit events for commands, webhooks, watchers, and moderation |
-| Idempotency | `from erlc_api.idempotency import MemoryDeduper, FileDeduper` | TTL dedupe for webhook deliveries and watcher restarts |
-| Limits | `from erlc_api.limits import poll_plan, safe_interval` | Conservative polling guidance without fake PRC limit claims |
-| Rate Limit | `from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter` | Dynamic in-memory limiter used by clients by default |
-| Error Codes | `from erlc_api.error_codes import explain_error_code` | Explain PRC error codes and wrapper exception mappings |
-| Custom Commands | `from erlc_api.custom_commands import CustomCommandRouter` | Framework-neutral router for PRC webhook messages starting with `;` |
-| Location | `from erlc_api.location import LocationTools` | Distances, nearest players, postal/street matching, map URLs, optional overlays |
-| Bundle | `from erlc_api.bundle import AsyncBundle, Bundle` | Named/custom v2 bundle presets without changing the client |
-| Rules | `from erlc_api.rules import RuleEngine, Conditions` | Evaluate flexible alert rules and return matches/callback results |
-| Multi Server | `from erlc_api.multiserver import AsyncMultiServer, MultiServer` | Read and aggregate multiple named servers with bounded concurrency |
-| Discord Tools | `from erlc_api.discord_tools import DiscordFormatter` | Dependency-free Discord embed/message payload dictionaries |
-| Diagnostics | `from erlc_api.diagnostics import diagnose_error` | User-facing diagnostics from errors, rate limits, command results, and status |
-| Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols |
-| Status | `from erlc_api.status import AsyncStatus, StatusBuilder` | Typed dashboard status snapshots with `.to_dict()` |
-| Command Flows | `from erlc_api.command_flows import CommandFlowBuilder` | Preview and validate command sequences without executing them |
+
+See [Function List](docs/wiki/Function-List.md) and
+[Utilities Reference](docs/wiki/Utilities-Reference.md) for the full module
+index.
 
 Example:
 
@@ -352,15 +415,15 @@ Example:
 from erlc_api.find import Finder
 from erlc_api.filter import Filter
 from erlc_api.export import Exporter
-from erlc_api.snapshot import SnapshotStore
 from erlc_api.bundle import AsyncBundle
 from erlc_api.status import StatusBuilder
+from erlc_api.vehicles import VehicleTools
 
 bundle = await AsyncBundle(api).dashboard()
 player = Finder(bundle).player("Avi")
 police = Filter(bundle.players or []).team("Police").all()
+vehicle_summary = VehicleTools(bundle).summary()
 csv_text = Exporter(police).csv()
-SnapshotStore("snapshots.jsonl").save(bundle)
 status = StatusBuilder(bundle).build()
 ```
 
@@ -471,6 +534,11 @@ The README is the compact API reference. The full documentation source lives in
 - [Commands Reference](docs/wiki/Commands-Reference.md)
 - [Function List](docs/wiki/Function-List.md)
 - [Utilities Reference](docs/wiki/Utilities-Reference.md)
+- [Vehicle Tools](docs/wiki/Vehicle-Tools.md)
+- [Emergency Calls](docs/wiki/Emergency-Calls.md)
+- [Permission Levels](docs/wiki/Permission-Levels.md)
+- [Wanted Stars](docs/wiki/Wanted-Stars.md)
+- [Scaling Your App](docs/wiki/Scaling-Your-App.md)
 - [Ops Utilities Reference](docs/wiki/Ops-Utilities-Reference.md)
 - [Workflow Utilities Reference](docs/wiki/Workflow-Utilities-Reference.md)
 - [Formatting, Analytics, and Export](docs/wiki/Formatting-Analytics-and-Export.md)
@@ -494,3 +562,24 @@ $env:PYTHONPATH = "src"
 python -m pytest -q
 python -m ruff check src tests scripts
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Public behavior changes should include
+tests, docs, and a changelog entry.
+
+## Support
+
+For questions and vulnerability reports, contact Avi Sehrawat on Discord:
+`avi1243`.
+
+## License
+
+`erlc-api.py` uses a custom attribution license. You may use, modify, and
+redistribute it, but public or distributed use must retain the license and give
+reasonable visible credit as described in [LICENSE](LICENSE).
+
+## Disclaimer
+
+This is an independent community wrapper. It is not an official PRC, ER:LC, or
+Roblox product.
