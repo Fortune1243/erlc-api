@@ -101,11 +101,12 @@ These helpers are advisory. They are not official PRC rate-limit enforcement.
 Imports:
 
 ```python
-from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter
+from erlc_api.ratelimit import AsyncRateLimiter, RateLimiter, RateLimitState, RateLimitSnapshot
 ```
 
 Purpose: track PRC rate-limit headers in memory and wait before avoidable
-requests. Most users should enable it through the client:
+requests. Most users enable it through the client constructor (`rate_limited=True`
+is the default):
 
 ```python
 api = AsyncERLC("server-key")
@@ -113,8 +114,49 @@ await api.players()
 print(api.rate_limits.to_dict())
 ```
 
-Use the public limiter classes directly only when building custom transports.
-Limiter state is process-local and memory-only.
+Use `AsyncRateLimiter` or `RateLimiter` directly only when building a custom
+HTTP transport. Both share the same interface; `AsyncRateLimiter.before_request`
+is a coroutine and uses `asyncio.Lock`; `RateLimiter.before_request` is
+synchronous and uses `threading.Lock`.
+
+### Public interface
+
+| Method | Async | Purpose |
+| --- | --- | --- |
+| `before_request(method, path, *, key_scope="server", bucket=None)` | `AsyncRateLimiter` only | Acquire the per-bucket lock, sleep if a reset window is active, return seconds waited. |
+| `before_request(method, path, *, key_scope="server", bucket=None)` | `RateLimiter` only | Synchronous equivalent. |
+| `after_response(method, path, headers, *, key_scope="server")` | Both | Parse `X-RateLimit-*` and `Retry-After` headers and store a `RateLimitState`. |
+| `after_error(error, *, method=None, path=None, key_scope="server")` | Both | Store backoff state from a `RateLimitError`. |
+| `snapshot()` | Both | Return a `RateLimitSnapshot` of all stored states. |
+| `reset()` | Both | Clear all stored state. |
+
+### RateLimitState fields
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `bucket` | `str` | Bucket name or `METHOD path` fallback. |
+| `limit` | `int \| None` | Request limit from `X-RateLimit-Limit`. |
+| `remaining` | `int \| None` | Remaining requests from `X-RateLimit-Remaining`. |
+| `reset_epoch_s` | `float \| None` | Unix epoch reset time from `X-RateLimit-Reset`. |
+| `retry_after_s` | `float \| None` | Seconds until retry from `Retry-After`. |
+| `key_scope` | `str \| None` | Server key scope (usually `"server"`). |
+
+Example for a custom transport:
+
+```python
+from erlc_api.ratelimit import AsyncRateLimiter
+
+limiter = AsyncRateLimiter()
+
+async def send(method: str, path: str, headers: dict) -> ...:
+    await limiter.before_request(method, path)
+    response = await http_client.request(method, path)
+    limiter.after_response(method, path, response.headers)
+    return response
+```
+
+Limiter state is process-local and memory-only. Multiple processes sharing a
+server key need external coordination.
 
 ## Error Codes
 
@@ -173,4 +215,4 @@ custom command router.
 
 ---
 
-[Previous Page: Utilities Reference](./Utilities-Reference.md) | [Next Page: Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
+[Previous Page: Wanted Stars](./Wanted-Stars.md) | [Next Page: Workflow Utilities Reference](./Workflow-Utilities-Reference.md)

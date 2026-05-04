@@ -27,9 +27,28 @@ Optional dependencies are imported only when a method needs them:
 | `erlc-api.py[time]` | `TimeTools().parse(..., enhanced=True)` |
 | `erlc-api.py[location]` | `MapRenderer().render_points(...)` |
 
+## Utility Categories
+
+Utilities fall into three groups:
+
+**Workflow utilities** (2.3+) are dashboard and bot helpers — location tools,
+vehicle analysis, emergency calls, rules engine, multi-server aggregation,
+Discord payload builders, caching, status snapshots, and command flows. Use
+these when building bots, web dashboards, or multi-server operators.
+
+**Ops utilities** (2.1+) are operational and persistence helpers — JSONL
+snapshots, audit logging, idempotency dedupe, polling guidance, and custom
+command routing. Use these for audit trails, restart-safe deduplication, and
+conservative polling intervals.
+
+**Core data utilities** (Finder, Filter, Sorter, Grouper, Differ, TimeTools,
+SchemaInspector) work on in-memory model collections and have no extras beyond
+the base install. They are described in this page below the workflow and ops
+sections.
+
 ## Workflow Utilities
 
-`erlc-api.py` 2.3 adds workflow helpers for dashboards, bots, and multi-server
+`erlc-api.py` 2.3 and 2.4 add workflow helpers for dashboards, bots, and multi-server
 apps. They are still explicit modules and do not load from top-level
 `import erlc_api`.
 
@@ -44,9 +63,12 @@ apps. They are still explicit modules and do not load from top-level
 | Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols. |
 | Status | `from erlc_api.status import AsyncStatus, StatusBuilder` | Typed dashboard status snapshots with `.to_dict()`. |
 | Command Flows | `from erlc_api.command_flows import CommandFlowBuilder` | Preview and validate command sequences without execution. |
+| Vehicle Tools | `from erlc_api.vehicles import VehicleTools` | Catalog-aware vehicle parsing, plate lookup, owner matching, and spawned-vehicle summaries. |
+| Emergency Calls | `from erlc_api.emergency import EmergencyCallTools` | Active/unresponded call filters, team summaries, and nearest-call helpers. |
 
-See [Workflow Utilities Reference](./Workflow-Utilities-Reference.md) for the
-full 2.3 workflow API.
+See [Workflow Utilities Reference](./Workflow-Utilities-Reference.md),
+[Vehicle Tools](./Vehicle-Tools.md), and [Emergency Calls](./Emergency-Calls.md)
+for the full workflow API.
 
 ## Ops Utilities
 
@@ -513,4 +535,4 @@ Common mistakes:
 
 ---
 
-[Previous Page: Function List](./Function-List.md) | [Next Page: Ops Utilities Reference](./Ops-Utilities-Reference.md)
+[Previous Page: Permission Levels](./Permission-Levels.md) | [Next Page: Vehicle Tools](./Vehicle-Tools.md)

@@ -45,6 +45,78 @@ pip install "erlc-api.py[location]"
 because the official API gives game X/Z coordinates, not a universal pixel
 calibration.
 
+## Vehicle Tools
+
+Import:
+
+```python
+from erlc_api.vehicles import PlayerVehicleBundle, VehicleTools
+```
+
+`VehicleTools` understands the typed vehicle catalog, PRC vehicle names,
+owners, plates, colors, and textures.
+
+```python
+bundle = await api.server(players=True, vehicles=True)
+tools = VehicleTools(bundle.vehicles)
+
+prestige = tools.prestige()
+duplicates = tools.duplicate_plates()
+avi_vehicles = tools.by_owner("Avi")
+
+joined = bundle.player_vehicles
+if joined is not None:
+    player_view = joined.player("Avi")
+    owned = player_view.vehicles if player_view else []
+```
+
+Core methods:
+
+| Method | Purpose |
+| --- | --- |
+| `by_owner(query)` | Match owner name or user ID. |
+| `by_team(players=...)` | Group vehicles by owner team using player data. |
+| `by_color(color)` / `by_texture(texture)` | Match visual attributes. |
+| `by_model(query)` / `by_name(query)` | Catalog-aware model/name search. |
+| `find_plate(plate)` / `duplicate_plates()` | Normalize and inspect plates. |
+| `abandoned(online_players)` | Vehicles whose owner is not currently online. |
+| `primary()` / `secondary()` / `prestige()` | Catalog classification helpers. |
+| `summary()` | Count by model, color, owner, and classification. |
+
+See [Vehicle Tools](./Vehicle-Tools.md) for parser and catalog details.
+
+## Emergency Calls
+
+Import:
+
+```python
+from erlc_api.emergency import EmergencyCallTools
+```
+
+Use these helpers when building dispatch dashboards or responder bots.
+
+```python
+bundle = await api.server(players=True, emergency_calls=True)
+calls = EmergencyCallTools(bundle.emergency_calls)
+
+unresponded = calls.unresponded()
+nearest = calls.nearest_to(bundle.players[0])
+summary = calls.summary()
+```
+
+Core methods:
+
+| Method | Purpose |
+| --- | --- |
+| `active()` | Calls that are still active in the fetched payload. |
+| `unresponded()` | Calls without assigned/responding player IDs. |
+| `by_team(team)` | Police, sheriff, fire, EMS, or other team grouping. |
+| `nearest_to(player_or_location)` | Sort calls by distance from a player/location. |
+| `nearest_players_to_call(call, players=...)` | Find responders near a call. |
+| `summary()` | Count total, active, unresponded, and by team. |
+
+See [Emergency Calls](./Emergency-Calls.md) for call-specific examples.
+
 ## Bundle Presets
 
 Import:
@@ -146,6 +218,9 @@ await channel.send(**payload)
 
 Text is clipped to Discord limits and `@everyone` / `@here` mentions are made
 safe.
+
+For the full method reference, see
+[Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md#discordformatter).
 
 ## Diagnostics
 

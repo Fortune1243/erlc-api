@@ -113,6 +113,10 @@ Important behavior:
 - `@everyone` and `@here` are neutralized;
 - content, field, title, and description lengths are clipped to Discord limits.
 
+`DiscordFormatter` also appears in the
+[Workflow Utilities Reference](./Workflow-Utilities-Reference.md#discord-tools)
+in the context of dashboard and bot workflows.
+
 ## Analyzer
 
 Signature:
