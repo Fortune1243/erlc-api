@@ -121,20 +121,20 @@ synchronous and uses `threading.Lock`.
 
 ### Public interface
 
-| Method | Async | Purpose |
-| --- | --- | --- |
-| `before_request(method, path, *, key_scope="server", bucket=None)` | `AsyncRateLimiter` only | Acquire the per-bucket lock, sleep if a reset window is active, return seconds waited. |
-| `before_request(method, path, *, key_scope="server", bucket=None)` | `RateLimiter` only | Synchronous equivalent. |
-| `after_response(method, path, headers, *, key_scope="server")` | Both | Parse `X-RateLimit-*` and `Retry-After` headers and store a `RateLimitState`. |
-| `after_error(error, *, method=None, path=None, key_scope="server")` | Both | Store backoff state from a `RateLimitError`. |
-| `snapshot()` | Both | Return a `RateLimitSnapshot` of all stored states. |
-| `reset()` | Both | Clear all stored state. |
+| Method | Class | Returns | Purpose |
+| --- | --- | --- | --- |
+| `async before_request(method, path, *, key_scope="server", bucket=None)` | `AsyncRateLimiter` | `float` | Acquire the per-bucket async lock, sleep if a reset window is active, return seconds waited. |
+| `before_request(method, path, *, key_scope="server", bucket=None)` | `RateLimiter` | `float` | Synchronous equivalent using a threading lock. |
+| `after_response(method, path, headers, *, key_scope="server")` | Both | `RateLimitState \| None` | Parse `X-RateLimit-*` and `Retry-After` headers and store a `RateLimitState`. Returns `None` when no rate-limit headers are present. |
+| `after_error(error, *, method=None, path=None, key_scope="server")` | Both | `RateLimitState \| None` | Store backoff state from a `RateLimitError`. Returns `None` for non-rate-limit errors. |
+| `snapshot()` | Both | `RateLimitSnapshot` | Return a snapshot of all stored states, sorted by scope and bucket. |
+| `reset()` | Both | `None` | Clear all stored state and route-to-bucket mappings. |
 
 ### RateLimitState fields
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `bucket` | `str` | Bucket name or `METHOD path` fallback. |
+| `bucket` | `str` | Bucket name from `X-RateLimit-Bucket`, or `"METHOD /path"` route key when no bucket header was present (e.g. `"GET /v2/server"`). |
 | `limit` | `int \| None` | Request limit from `X-RateLimit-Limit`. |
 | `remaining` | `int \| None` | Remaining requests from `X-RateLimit-Remaining`. |
 | `reset_epoch_s` | `float \| None` | Unix epoch reset time from `X-RateLimit-Reset`. |

@@ -8,7 +8,7 @@ from erlc_api import ERLCError, RateLimitError
 try:
     players = await api.players()
 except RateLimitError as exc:
-    print(exc.retry_after)
+    print(exc.retry_after_s)
 except ERLCError as exc:
     print(exc)
 ```
@@ -223,4 +223,4 @@ your application layer if you need them.
 
 ---
 
-[Previous Page: Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) | [Next Page: Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)
+[Previous Page: Scaling Your App](./Scaling-Your-App.md) | [Next Page: Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)

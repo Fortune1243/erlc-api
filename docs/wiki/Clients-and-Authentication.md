@@ -135,8 +135,9 @@ Pass `rate_limited=False` only when your application already coordinates rate
 limits outside the wrapper.
 
 `api.rate_limits` returns a `RateLimitSnapshot` when dynamic limiting is enabled,
-or `None` when it is disabled. Global-key clients and server-key-only clients
-are tracked in separate scopes.
+or `None` when it is disabled. Requests made with a `global_key` are tracked
+under the `"global"` scope; server-key-only requests are tracked under
+`"server"`. The two scopes are independent and never share state.
 
 ## Authentication Headers
 
