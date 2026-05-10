@@ -1,5 +1,11 @@
 # Endpoint Reference
 
+This page lists every method on `Client` and `AsyncClient`, the PRC endpoint
+each one calls, its full signature, return type, and common mistakes to avoid.
+Use it as the definitive reference when you need a method's exact parameters.
+For task-oriented examples (dashboards, logs, multi-server), see the
+[Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md).
+
 All endpoint methods exist on both `AsyncClient`/`AsyncERLC` and
 `Client`/`ERLC`. Async examples use `await`; sync examples remove `await`.
 

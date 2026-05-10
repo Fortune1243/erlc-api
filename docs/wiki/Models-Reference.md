@@ -1,5 +1,11 @@
 # Models Reference
 
+This page describes every typed dataclass that endpoint methods return. Each
+model carries a `.raw` attribute with the original PRC dict, an `.extra` dict
+of fields PRC sent that the wrapper did not recognize, and a `.to_dict()` helper
+for serialization. Use this page when you need to know a field name, its type,
+or how PRC JSON keys map to Python attributes.
+
 Endpoint methods return frozen dataclasses by default. Use `raw=True` on an
 endpoint method when you need exact PRC JSON.
 

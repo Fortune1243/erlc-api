@@ -1,7 +1,10 @@
 # Permission Levels
 
-`PermissionLevel` is an ordered enum for comparing PRC permission strings while
-preserving raw API text on models.
+`PermissionLevel` is an ordered enum that wraps PRC permission strings so you
+can compare player roles in code without hardcoding string values. `Player` and
+`StaffMember` models expose a `.permission_level` property that returns a
+`PermissionLevel` — use it for ordered comparisons like `>= PermissionLevel.MOD`
+instead of comparing raw strings.
 
 ## Import
 

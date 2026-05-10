@@ -57,4 +57,4 @@ external queue, cache, or distributed rate limiter in your application.
 
 ---
 
-[Previous Page: Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) | [Next Page: Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+[Previous Page: Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) | [Next Page: Errors and Troubleshooting](./Errors-and-Troubleshooting.md)

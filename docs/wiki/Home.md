@@ -6,23 +6,46 @@ escape hatches, dashboard bundle helpers, flexible commands, default-on
 process-local rate limiting, command policy guardrails, and explicit lazy
 utility modules.
 
+## I Want To...
+
+| I want to... | Go to |
+| --- | --- |
+| Install the package | [Installation and Extras](./Installation-and-Extras.md) |
+| Understand how the library works | [How It Works](./How-It-Works.md) |
+| Make my first API call | [Getting Started](./Getting-Started.md) |
+| Choose sync vs async | [How It Works — Sync vs Async](./How-It-Works.md#sync-vs-async) |
+| See every API method | [Endpoint Reference](./Endpoint-Reference.md) |
+| Look up a model's fields | [Models Reference](./Models-Reference.md) |
+| Send a moderation command | [Commands Reference](./Commands-Reference.md) |
+| Understand rate limits | [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md) |
+| Handle an error | [Errors and Troubleshooting](./Errors-and-Troubleshooting.md) |
+| Set up webhook verification | [Webhooks Reference](./Webhooks-Reference.md) |
+| Build a Discord bot | [Quickstart: Discord.py](./Quickstart-Discord.py.md) |
+| Build a web dashboard | [Quickstart: Web Backend](./Quickstart-Web-Backend.md) |
+| Migrate from v2 | [Migration to v3](./Migration-to-v3.md) |
+| Browse all utilities | [Utilities Reference](./Utilities-Reference.md) |
+| Test without hitting the API | [Testing and Mocking](./Testing-and-Mocking.md) |
+
 ## Recommended Reading Path
 
 1. [Installation and Extras](./Installation-and-Extras.md)
-2. [Clients and Authentication](./Clients-and-Authentication.md)
-3. [Endpoint Reference](./Endpoint-Reference.md)
-4. [Models Reference](./Models-Reference.md)
-5. [Commands Reference](./Commands-Reference.md)
-6. [Utilities Reference](./Utilities-Reference.md)
-7. [Getting Started](./Getting-Started.md)
-8. [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
-9. [Quickstart: Discord.py](./Quickstart-Discord.py.md)
-10. [Migration to v3](./Migration-to-v3.md)
+2. [How It Works](./How-It-Works.md)
+3. [Clients and Authentication](./Clients-and-Authentication.md)
+4. [Endpoint Reference](./Endpoint-Reference.md)
+5. [Models Reference](./Models-Reference.md)
+6. [Commands Reference](./Commands-Reference.md)
+7. [Utilities Reference](./Utilities-Reference.md)
+8. [Getting Started](./Getting-Started.md)
+9. [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
+10. [Quickstart: Discord.py](./Quickstart-Discord.py.md)
+11. [Migration to v3](./Migration-to-v3.md)
 
 ## Start
 
 - [Installation and Extras](./Installation-and-Extras.md): install commands,
   extras, supported Python versions, and package/import naming.
+- [How It Works](./How-It-Works.md): request flow, server keys, typed
+  responses, sync vs async, rate limits, and utility loading.
 - [Getting Started](./Getting-Started.md): first sync and async calls, commands,
   multi-server overrides, and common mistakes.
 - [FAQ](./FAQ.md): quick answers for package naming, raw JSON, utilities, and
@@ -82,10 +105,9 @@ utility modules.
   429 behavior, retry boundaries, and polling guidance.
 - [Scaling Your App](./Scaling-Your-App.md): global keys, caching, limiter state,
   and multi-process boundaries.
-- [Errors and Rate Limits](./Errors-and-Rate-Limits.md): exception mapping and
-  rate-limit metadata.
-- [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md):
-  practical exception handling and diagnostics.
+- [Errors and Troubleshooting](./Errors-and-Troubleshooting.md): exception
+  hierarchy, error-code mapping, rate-limit metadata, practical handling
+  patterns, and diagnostics.
 - [Testing and Mocking](./Testing-and-Mocking.md): fake clients, raw fixtures,
   dry-runs, webhook tests, and watcher tests.
 
@@ -97,11 +119,6 @@ utility modules.
 - [Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md): design goals
   and why the wrapper stays lightweight.
 
-## Related Pages
-
-- [Earlier in the guide: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
-- [Next in the guide: Installation and Extras](./Installation-and-Extras.md)
-
 ---
 
-[Previous Page: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md) | [Next Page: Installation and Extras](./Installation-and-Extras.md)
+[Next Page: Installation and Extras](./Installation-and-Extras.md)

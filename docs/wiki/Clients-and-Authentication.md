@@ -8,6 +8,35 @@
 Both clients use the same flat method names. The only difference is whether you
 `await` the call.
 
+## Sync vs Async: Which Client to Use
+
+Use `AsyncClient` / `AsyncERLC` when:
+
+- you are writing a Discord bot, a FastAPI or Starlette web app, or any other
+  code that already runs inside an `asyncio` event loop;
+- you want to interleave multiple API calls concurrently using `asyncio.gather`.
+
+Use `Client` / `ERLC` when:
+
+- you are writing a standalone script, a CLI tool, or a cron job;
+- there is no event loop in scope and you do not need concurrency.
+
+| Situation | Use |
+| --- | --- |
+| Standalone script or CLI | `Client` / `ERLC` |
+| Discord bot (discord.py, nextcord, disnake) | `AsyncClient` / `AsyncERLC` |
+| FastAPI / Starlette / aiohttp web app | `AsyncClient` / `AsyncERLC` |
+| Celery worker, background thread | `Client` / `ERLC` |
+| asyncio script with `asyncio.run(main())` | `AsyncClient` / `AsyncERLC` |
+
+**Never call the sync client from inside an async function.** Sync endpoint
+methods call `httpx.Client.send()`, which blocks the thread. Inside a
+`discord.py` command or a FastAPI route handler, that blocks the entire event
+loop.
+
+**Never call `asyncio.run()` inside an already-running event loop.** If you are
+in a Jupyter notebook or an async context, use `await` with `AsyncClient` instead.
+
 ## AsyncERLC
 
 Signature:
@@ -44,8 +73,8 @@ Alias:
 ```python
 from erlc_api import AsyncClient
 
-async with AsyncClient.from_env() as api:
-    players = await api.players()
+async with AsyncClient.from_env() as client:
+    players = await client.players()
 ```
 
 Important options:
@@ -101,8 +130,8 @@ Alias:
 ```python
 from erlc_api import Client
 
-with Client.from_env() as api:
-    print(api.server())
+with Client.from_env() as client:
+    print(client.server())
 ```
 
 Common mistakes:

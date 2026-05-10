@@ -1,0 +1,96 @@
+site_name: erlc-api.py
+site_url: https://fortune1243.github.io/erlc-api
+site_description: Typed sync and async Python wrapper for the ER:LC PRC API
+site_author: Avi Sehrawat
+
+repo_name: Fortune1243/erlc-api
+repo_url: https://github.com/Fortune1243/erlc-api
+edit_uri: edit/master/docs/wiki/
+
+docs_dir: docs/wiki
+site_dir: site
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+nav:
+  - Home: Home.md
+  - Getting Started:
+      - Installation and Extras: Installation-and-Extras.md
+      - How It Works: How-It-Works.md
+      - Getting Started: Getting-Started.md
+      - FAQ: FAQ.md
+  - API Reference:
+      - Clients and Authentication: Clients-and-Authentication.md
+      - Endpoint Reference: Endpoint-Reference.md
+      - Models Reference: Models-Reference.md
+      - Typed vs Raw Responses: Typed-vs-Raw-Responses.md
+      - Commands Reference: Commands-Reference.md
+      - Permission Levels: Permission-Levels.md
+      - Function List: Function-List.md
+  - Utilities:
+      - Utilities Reference: Utilities-Reference.md
+      - Vehicle Tools: Vehicle-Tools.md
+      - Emergency Calls: Emergency-Calls.md
+      - Wanted Stars: Wanted-Stars.md
+      - Ops Utilities Reference: Ops-Utilities-Reference.md
+      - Workflow Utilities Reference: Workflow-Utilities-Reference.md
+      - Formatting, Analytics, and Export: Formatting-Analytics-and-Export.md
+      - Moderation Helpers: Moderation-Helpers.md
+      - Waiters and Watchers: Waiters-and-Watchers.md
+      - Webhooks Reference: Webhooks-Reference.md
+      - Event Webhooks and Custom Commands: Event-Webhooks-and-Custom-Commands.md
+      - Custom Commands Reference: Custom-Commands-Reference.md
+  - Reliability:
+      - Security and Secrets: Security-and-Secrets.md
+      - Rate Limits, Retries, and Reliability: Rate-Limits-Retries-and-Reliability.md
+      - Scaling Your App: Scaling-Your-App.md
+      - Errors and Troubleshooting: Errors-and-Troubleshooting.md
+      - Testing and Mocking: Testing-and-Mocking.md
+  - Examples and Migration:
+      - "Quickstart: Web Backend": Quickstart-Web-Backend.md
+      - "Quickstart: Discord.py": Quickstart-Discord.py.md
+      - Endpoint Usage Cookbook: Endpoint-Usage-Cookbook.md
+      - Migration to v3: Migration-to-v3.md
+      - Migration to v2: Migration-to-v2.md
+      - Comparison and Why erlc-api.py: Comparison-and-Why-erlc-api.md

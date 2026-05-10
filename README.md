@@ -3,6 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![Python](https://img.shields.io/pypi/pyversions/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![License](https://img.shields.io/badge/license-Custom_Attribution-blue)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://fortune1243.github.io/erlc-api)
 [![Last Commit](https://img.shields.io/github/last-commit/Fortune1243/erlc-api)](https://github.com/Fortune1243/erlc-api)
 
 `erlc-api.py` is a typed, v2-first Python wrapper for the ER:LC PRC API. It
@@ -138,16 +139,14 @@ flows, webhooks, vehicle tools, emergency-call tools, and multi-server reads.
 
 ## Documentation
 
-Canonical docs live in this repository under [`docs/wiki`](docs/wiki/Home.md).
+Full documentation is at **https://fortune1243.github.io/erlc-api**.
 
 Useful starting points:
 
-- [Endpoint Reference](docs/wiki/Endpoint-Reference.md)
-- [Models Reference](docs/wiki/Models-Reference.md)
-- [Commands Reference](docs/wiki/Commands-Reference.md)
-- [Getting Started](docs/wiki/Getting-Started.md)
-- [Migration to v3](docs/wiki/Migration-to-v3.md)
-- [Comparison and Why erlc-api.py](docs/wiki/Comparison-and-Why-erlc-api.md)
+- [How It Works](https://fortune1243.github.io/erlc-api/How-It-Works/) — mental model, sync vs async, rate limits
+- [Endpoint Reference](https://fortune1243.github.io/erlc-api/Endpoint-Reference/) — every API method
+- [Getting Started](https://fortune1243.github.io/erlc-api/Getting-Started/) — first calls, commands, multi-server
+- [Migration to v3](https://fortune1243.github.io/erlc-api/Migration-to-v3/) — upgrade from v2
 
 Runnable examples live in [`examples`](examples).
 
@@ -165,3 +164,12 @@ Before release work:
 python -m build
 python -m twine check dist/*
 ```
+
+## Contributing
+
+Bug reports and pull requests are welcome on the [GitHub repository](https://github.com/Fortune1243/erlc-api).
+Before submitting, run `ruff check` and `pytest -q` locally.
+
+## License
+
+This project uses a custom attribution license. See [LICENSE](LICENSE) for details.

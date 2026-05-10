@@ -172,7 +172,7 @@ Your application should handle:
 
 ## Related Pages
 
-- [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+- [Errors and Troubleshooting](./Errors-and-Troubleshooting.md)
 - [Ops Utilities Reference](./Ops-Utilities-Reference.md)
 - [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 - [Waiters and Watchers](./Waiters-and-Watchers.md)

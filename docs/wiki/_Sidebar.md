@@ -1,3 +1,8 @@
+<!-- NOTE: This sidebar is the legacy GitHub Wiki nav.
+     The active navigation is now defined in mkdocs.yml at the repo root.
+     Hosted docs: https://fortune1243.github.io/erlc-api
+     Do not update this file for navigation changes; update mkdocs.yml instead. -->
+
 # Documentation
 
 ## Start

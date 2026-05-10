@@ -31,8 +31,8 @@ Use `Client` in scripts, cron jobs, one-off admin tools, and CLIs.
 from erlc_api import Client
 
 
-with Client.from_env() as api:
-    players = api.players()
+with Client.from_env() as client:
+    players = client.players()
     for player in players:
         print(player.name, player.user_id, player.team)
 ```
@@ -48,8 +48,8 @@ running an event loop.
 from erlc_api import AsyncClient
 
 
-async with AsyncClient.from_env() as api:
-    server = await api.server()
+async with AsyncClient.from_env() as client:
+    server = await client.server()
     print(server.name, server.current_players, server.max_players)
 ```
 
@@ -103,10 +103,10 @@ Create one client with no default key and pass keys per request, or use a
 default key and override individual calls:
 
 ```python
-api = AsyncClient.from_env()
+client = AsyncClient.from_env()
 
-primary = await api.players()
-secondary = await api.players(server_key="secondary-server-key")
+primary = await client.players()
+secondary = await client.players(server_key="secondary-server-key")
 ```
 
 Use `global_key=` or `ERLC_GLOBAL_KEY` only when PRC gives your application an
