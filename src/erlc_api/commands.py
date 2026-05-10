@@ -4,6 +4,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from .models import PermissionLevel
+
 
 def normalize_command(command: str | Command) -> str:
     """Return a PRC command string, accepting either `:cmd ...` or `cmd ...`."""
@@ -64,6 +66,84 @@ class CommandPolicyError(ValueError):
         message = result.reason or "Command is not allowed by policy."
         super().__init__(message)
         self.result = result
+
+
+@dataclass(frozen=True)
+class CommandMetadata:
+    name: str
+    display_name: str
+    category: str
+    minimum_permission: PermissionLevel = PermissionLevel.MOD
+    supports_target: bool = False
+    supports_multiple_targets: bool = False
+    supports_text: bool = False
+
+
+def _metadata(
+    name: str,
+    display_name: str,
+    category: str,
+    minimum_permission: PermissionLevel = PermissionLevel.MOD,
+    *,
+    supports_target: bool = False,
+    supports_multiple_targets: bool = False,
+    supports_text: bool = False,
+) -> CommandMetadata:
+    return CommandMetadata(
+        name=name,
+        display_name=display_name,
+        category=category,
+        minimum_permission=minimum_permission,
+        supports_target=supports_target,
+        supports_multiple_targets=supports_multiple_targets,
+        supports_text=supports_text,
+    )
+
+
+COMMAND_METADATA: dict[str, CommandMetadata] = {
+    "h": _metadata("h", "Hint", "communication", PermissionLevel.MOD, supports_text=True),
+    "hint": _metadata("hint", "Hint", "communication", PermissionLevel.MOD, supports_text=True),
+    "m": _metadata("m", "Message", "communication", PermissionLevel.MOD, supports_text=True),
+    "message": _metadata("message", "Message", "communication", PermissionLevel.MOD, supports_text=True),
+    "pm": _metadata("pm", "Private Message", "communication", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True, supports_text=True),
+    "privatemessage": _metadata("privatemessage", "Private Message", "communication", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True, supports_text=True),
+    "kick": _metadata("kick", "Kick Player", "moderation", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True, supports_text=True),
+    "ban": _metadata("ban", "Ban Player", "moderation", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True, supports_text=True),
+    "unban": _metadata("unban", "Unban Player", "moderation", PermissionLevel.ADMIN, supports_target=True),
+    "wanted": _metadata("wanted", "Mark Wanted", "roleplay", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "unwanted": _metadata("unwanted", "Clear Wanted", "roleplay", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "jail": _metadata("jail", "Jail Player", "moderation", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "unjail": _metadata("unjail", "Unjail Player", "moderation", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "kill": _metadata("kill", "Kill Player", "admin", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "heal": _metadata("heal", "Heal Player", "admin", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "refresh": _metadata("refresh", "Refresh Player", "admin", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "respawn": _metadata("respawn", "Respawn Player", "admin", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "bring": _metadata("bring", "Bring Player", "admin", PermissionLevel.MOD, supports_target=True, supports_multiple_targets=True),
+    "tp": _metadata("tp", "Teleport", "admin", PermissionLevel.MOD, supports_target=True),
+    "teleport": _metadata("teleport", "Teleport", "admin", PermissionLevel.MOD, supports_target=True),
+    "admin": _metadata("admin", "Grant Admin", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "unadmin": _metadata("unadmin", "Remove Admin", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "mod": _metadata("mod", "Grant Moderator", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "unmod": _metadata("unmod", "Remove Moderator", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "helper": _metadata("helper", "Grant Helper", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "unhelper": _metadata("unhelper", "Remove Helper", "permissions", PermissionLevel.ADMIN, supports_target=True, supports_multiple_targets=True),
+    "log": _metadata("log", "Log Note", "utility", PermissionLevel.MOD, supports_text=True),
+    "weather": _metadata("weather", "Set Weather", "server", PermissionLevel.ADMIN),
+    "time": _metadata("time", "Set Time", "server", PermissionLevel.ADMIN),
+    "shutdown": _metadata("shutdown", "Shutdown Server", "server", PermissionLevel.OWNER),
+}
+
+
+def get_command_metadata(command: str | Command) -> CommandMetadata | None:
+    name = _command_name(normalize_command(command)).casefold()
+    return COMMAND_METADATA.get(name)
+
+
+def _command_label(name: str) -> str:
+    metadata = COMMAND_METADATA.get(name.casefold())
+    if metadata is None:
+        return f"'{name}'"
+    return f"'{name}' ({metadata.display_name}, recommended {metadata.minimum_permission.display_name}+)"
 
 
 def _command_name(command: str) -> str:
@@ -141,7 +221,7 @@ class CommandPolicy:
                 name=name,
                 allowed=False,
                 code="blocked",
-                reason=f"Command '{name}' is blocked by policy.",
+                reason=f"Command {_command_label(name)} is blocked by policy.",
             )
 
         if key not in self.allowed:
@@ -150,7 +230,7 @@ class CommandPolicy:
                 name=name,
                 allowed=False,
                 code="not_allowed",
-                reason=f"Command '{name}' is not in the allowed command set.",
+                reason=f"Command {_command_label(name)} is not in the allowed command set.",
             )
 
         return CommandPolicyResult(command=normalized, name=name, allowed=True)
@@ -213,10 +293,13 @@ __all__ = [
     "BuiltCommand",
     "Command",
     "CommandFactory",
+    "CommandMetadata",
     "CommandPolicy",
     "CommandPolicyError",
     "CommandPolicyResult",
+    "COMMAND_METADATA",
     "cmd",
+    "get_command_metadata",
     "infer_command_success",
     "normalize_command",
     "validate_command",

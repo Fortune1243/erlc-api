@@ -73,6 +73,16 @@ class Finder:
             out.append(vehicle)
         return out
 
+    def wanted(self, *, stars: int = 1, team: str | None = None):
+        out = []
+        for player in u.players(self.data):
+            if (player.wanted_stars or 0) < stars:
+                continue
+            if not u.equals(player.team, team):
+                continue
+            out.append(player)
+        return out
+
     def command_logs(
         self,
         *,

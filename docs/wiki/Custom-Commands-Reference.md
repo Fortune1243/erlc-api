@@ -5,7 +5,7 @@ can create custom in-game commands. `erlc_api.webhooks` remains the low-level
 signature verification and event decoding layer. `erlc_api.custom_commands` is a
 small, framework-neutral router built on top of that parsed webhook data.
 
-Reference: [PRC Event Webhook docs](https://apidocs.policeroleplay.community/for-developers/v2-api-reference/event-webhook)
+Reference: [ER:LC API docs](https://apidocs.erlc.gg/)
 
 ## Import
 

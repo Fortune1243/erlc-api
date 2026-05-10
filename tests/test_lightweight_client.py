@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from erlc_api import AsyncERLC, ERLC, RateLimitError, cmd
+from erlc_api._constants import BASE_URL
 from erlc_api._http import AsyncTransport, ClientSettings, SyncTransport
 
 
@@ -82,6 +83,13 @@ def _json_response(payload: object, status: int = 200, headers: dict[str, str] |
     if headers:
         merged_headers.update(headers)
     return httpx.Response(status, headers=merged_headers, json=payload)
+
+
+def test_clients_default_to_current_api_domain() -> None:
+    assert BASE_URL == "https://api.erlc.gg"
+    assert ClientSettings().base_url == BASE_URL
+    assert AsyncERLC("key", rate_limited=False).settings.base_url == BASE_URL
+    assert ERLC("key", rate_limited=False).settings.base_url == BASE_URL
 
 
 @pytest.mark.asyncio

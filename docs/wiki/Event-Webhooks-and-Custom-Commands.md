@@ -6,7 +6,7 @@ This guide helps you build an endpoint that:
 2. receives in-game custom commands starting with `;`
 3. routes commands to your own app handlers
 
-Reference: [PRC Event Webhook docs](https://apidocs.policeroleplay.community/for-developers/v2-api-reference/event-webhook)
+Reference: [ER:LC API docs](https://apidocs.erlc.gg/)
 
 For command-specific alias, middleware, predicate, and unknown-handler routing,
 prefer [Custom Commands Reference](./Custom-Commands-Reference.md). This page

@@ -36,6 +36,18 @@ All methods accept `server_key=` and `raw=True`.
 - `CommandPolicy.check(command)` / `CommandPolicy.validate(command)`
 - `CommandPolicyResult`
 - `CommandPolicyError`
+- `get_command_metadata(":pm Player hi")`
+- `CommandMetadata`
+
+## Models And Enums
+
+- `PermissionLevel.NORMAL`
+- `PermissionLevel.MOD`
+- `PermissionLevel.ADMIN`
+- `Player.permission_level`
+- `StaffMember.permission_level`
+- `Vehicle.model_name`, `Vehicle.year`, `Vehicle.owner_name`, `Vehicle.normalized_plate`
+- `CommandResult.command_id`
 
 ## Security
 
@@ -72,6 +84,8 @@ All methods accept `server_key=` and `raw=True`.
 - `from erlc_api.cache import AsyncCachedClient, CachedClient, MemoryCache`
 - `from erlc_api.status import AsyncStatus, Status, StatusBuilder`
 - `from erlc_api.command_flows import CommandFlowBuilder, CommandTemplate`
+- `from erlc_api.vehicles import VehicleTools, PlayerVehicleBundle, parse_vehicle_name`
+- `from erlc_api.emergency import EmergencyCallTools`
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.
 
 Utilities are not imported by top-level `import erlc_api`.
@@ -83,4 +97,4 @@ Utilities are not imported by top-level `import erlc_api`.
 
 ---
 
-[Previous Page: Commands Reference](./Commands-Reference.md) | [Next Page: Utilities Reference](./Utilities-Reference.md)
+[Previous Page: Commands Reference](./Commands-Reference.md) | [Next Page: Permission Levels](./Permission-Levels.md)

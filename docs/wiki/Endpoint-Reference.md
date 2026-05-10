@@ -282,13 +282,18 @@ Minimal example:
 
 ```python
 from erlc_api.find import Finder
+from erlc_api.vehicles import VehicleTools
 
-vehicle = Finder(await api.vehicles()).vehicle(plate="ABC123")
+vehicles = await api.vehicles()
+vehicle = Finder(vehicles).vehicle(plate="ABC123")
+summary = VehicleTools(vehicles).summary()
 ```
 
 Common mistakes:
 
-- Looking for `vehicle.model` as an attribute. Use `vehicle.name` or `vehicle.model()`.
+- Treating the API name as already normalized. Use `vehicle.model`,
+  `vehicle.year`, `vehicle.normalized_plate`, or
+  `from erlc_api.vehicles import VehicleTools` for catalog-aware lookups.
 
 ## `bans`
 
@@ -334,13 +339,15 @@ Minimal example:
 from erlc_api import cmd
 
 result = await api.command(cmd.pm("Player", "hello"))
-print(result.success, result.message)
+print(result.success, result.message, result.command_id)
 ```
 
 Important options:
 
 - `dry_run=True` normalizes and validates locally, then returns a local result without sending HTTP.
 - `raw=True` returns the exact command response payload.
+- `CommandResult.command_id` is populated from `commandId`, `CommandId`, or
+  `command_id` when PRC includes a command tracking ID.
 
 Common mistakes:
 

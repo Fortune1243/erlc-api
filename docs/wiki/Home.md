@@ -3,7 +3,8 @@
 `erlc-api.py` v2 is a lightweight sync and async wrapper for the ER:LC PRC API.
 It uses flat clients, typed dataclasses by default, raw JSON escape hatches,
 flexible commands, default-on process-local rate limiting, command policy
-guardrails, and explicit lazy utility modules.
+guardrails, vehicle catalog tools, wanted-star helpers, and explicit lazy
+utility modules.
 
 ## Recommended Reading Path
 
@@ -42,6 +43,8 @@ guardrails, and explicit lazy utility modules.
 - [Commands Reference](./Commands-Reference.md): plain strings, `cmd`, dry-run,
   normalization, validation, and command error behavior.
 - [Function List](./Function-List.md): compact import and method inventory.
+- [Permission Levels](./Permission-Levels.md): ordered enum helpers while
+  preserving raw permission strings.
 
 ## Utilities And Operations
 
@@ -52,6 +55,12 @@ guardrails, and explicit lazy utility modules.
 - [Workflow Utilities Reference](./Workflow-Utilities-Reference.md): location,
   bundle presets, rules, multi-server reads, Discord payloads, diagnostics,
   caching, status, and command flows.
+- [Vehicle Tools](./Vehicle-Tools.md): catalog-aware model parsing, owner joins,
+  plates, textures, and summaries.
+- [Emergency Calls](./Emergency-Calls.md): polling/webhook call helpers,
+  summaries, and nearest-call patterns.
+- [Wanted Stars](./Wanted-Stars.md): filters, finders, sorters, and watcher
+  events for `WantedStars`.
 - [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md):
   output helpers for Discord, console, dashboards, CSV, Markdown, HTML, and XLSX.
 - [Moderation Helpers](./Moderation-Helpers.md): safe command composition,
@@ -71,6 +80,8 @@ guardrails, and explicit lazy utility modules.
   redaction, and webhook verification rules.
 - [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md):
   429 behavior, retry boundaries, and polling guidance.
+- [Scaling Your App](./Scaling-Your-App.md): global keys, caching, limiter state,
+  and multi-process boundaries.
 - [Errors and Rate Limits](./Errors-and-Rate-Limits.md): exception mapping and
   rate-limit metadata.
 - [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md):

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any, Iterable, Mapping
 
+from ._constants import BASE_URL
 from ._errors import APIError, AuthError, NetworkError, RateLimitError
 from ._http import AsyncTransport, ClientSettings, SyncTransport
 from .commands import Command, normalize_command
@@ -148,7 +149,7 @@ class AsyncERLC:
         server_key: str | None = None,
         *,
         global_key: str | None = None,
-        base_url: str = "https://api.policeroleplay.community",
+        base_url: str = BASE_URL,
         timeout_s: float = 20.0,
         retry_429: bool = True,
         rate_limited: bool = True,
@@ -321,7 +322,7 @@ class ERLC:
         server_key: str | None = None,
         *,
         global_key: str | None = None,
-        base_url: str = "https://api.policeroleplay.community",
+        base_url: str = BASE_URL,
         timeout_s: float = 20.0,
         retry_429: bool = True,
         rate_limited: bool = True,

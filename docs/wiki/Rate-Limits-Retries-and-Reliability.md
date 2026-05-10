@@ -139,6 +139,8 @@ statuses = await manager.status()
 Per-server errors are collected by default, so one failed server does not hide
 the state of every other server.
 
+For larger deployments, see [Scaling Your App](./Scaling-Your-App.md).
+
 ## Reliability Boundaries
 
 The wrapper handles:
@@ -177,4 +179,4 @@ Your application should handle:
 
 ---
 
-[Previous Page: Security and Secrets](./Security-and-Secrets.md) | [Next Page: Errors and Rate Limits](./Errors-and-Rate-Limits.md)
+[Previous Page: Security and Secrets](./Security-and-Secrets.md) | [Next Page: Scaling Your App](./Scaling-Your-App.md)

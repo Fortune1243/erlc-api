@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from . import _utility as u
+from .models import PermissionLevel
 
 
 Predicate = Callable[[Any], bool]
@@ -21,8 +22,14 @@ class Filter:
     def team(self, value: str) -> Filter:
         return self._where(lambda item: u.equals(u.get_value(item, "team"), value))
 
-    def permission(self, value: str) -> Filter:
+    def permission(self, value: str | PermissionLevel) -> Filter:
+        if isinstance(value, PermissionLevel):
+            return self._where(lambda item: PermissionLevel.parse(u.get_value(item, "permission", u.get_value(item, "role"))) == value)
         return self._where(lambda item: u.equals(u.get_value(item, "permission", u.get_value(item, "role")), value))
+
+    def permission_at_least(self, value: str | PermissionLevel) -> Filter:
+        level = PermissionLevel.parse(value)
+        return self._where(lambda item: PermissionLevel.parse(u.get_value(item, "permission", u.get_value(item, "role"))) >= level)
 
     def role(self, value: str) -> Filter:
         return self._where(lambda item: u.equals(u.get_value(item, "role"), value))
@@ -45,6 +52,9 @@ class Filter:
 
     def vehicle_owner(self, owner: str) -> Filter:
         return self._where(lambda item: u.equals(u.get_value(item, "owner"), owner))
+
+    def wanted(self, *, stars: int = 1) -> Filter:
+        return self._where(lambda item: (u.get_value(item, "wanted_stars") or 0) >= stars)
 
     def where(self, predicate: Predicate) -> Filter:
         return self._where(predicate)

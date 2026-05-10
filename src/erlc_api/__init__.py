@@ -20,10 +20,12 @@ from ._errors import (
 from .client import AsyncERLC, ERLC, ValidationResult, ValidationStatus
 from .commands import (
     Command,
+    CommandMetadata,
     CommandPolicy,
     CommandPolicyError,
     CommandPolicyResult,
     cmd,
+    get_command_metadata,
     normalize_command,
     validate_command,
 )
@@ -36,6 +38,7 @@ from .models import (
     JoinLogEntry,
     KillLogEntry,
     ModCallEntry,
+    PermissionLevel,
     Player,
     PlayerLocation,
     ServerBundle,
@@ -50,7 +53,7 @@ from .models import (
 try:
     __version__ = _package_version("erlc-api.py")
 except PackageNotFoundError:
-    __version__ = "2.3.1"
+    __version__ = "2.4.0"
 
 __all__ = [
     "APIError",
@@ -60,6 +63,7 @@ __all__ = [
     "BanEntry",
     "BanList",
     "Command",
+    "CommandMetadata",
     "CommandPolicy",
     "CommandPolicyError",
     "CommandPolicyResult",
@@ -77,6 +81,7 @@ __all__ = [
     "NetworkError",
     "NotFoundError",
     "PermissionDeniedError",
+    "PermissionLevel",
     "Player",
     "PlayerLocation",
     "ProhibitedMessageError",
@@ -93,6 +98,7 @@ __all__ = [
     "Vehicle",
     "VehicleColor",
     "cmd",
+    "get_command_metadata",
     "__version__",
     "normalize_command",
     "parse_player_identifier",

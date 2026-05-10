@@ -46,6 +46,15 @@ class Analyzer:
     def command_usage(self) -> dict[str, int]:
         return dict(Counter(u.command_name(entry.command) or "unknown" for entry in u.command_logs(self.data)))
 
+    def command_categories(self) -> dict[str, int]:
+        from .commands import get_command_metadata
+
+        counter: Counter[str] = Counter()
+        for entry in u.command_logs(self.data):
+            metadata = get_command_metadata(entry.command or "") if entry.command else None
+            counter[metadata.category if metadata else "unknown"] += 1
+        return dict(counter)
+
     def staff_activity(self) -> dict[str, int]:
         counter: Counter[str] = Counter()
         for entry in u.command_logs(self.data):

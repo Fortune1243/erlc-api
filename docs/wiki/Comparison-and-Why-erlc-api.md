@@ -4,6 +4,11 @@
 typed responses, flexible commands, lazy utilities, and framework-neutral
 webhook helpers.
 
+The root [comparison.md](../../comparison.md) contains a compact package
+comparison table. In short: `erlc-api.py` is flat, sync+async, utility-rich, and
+typed by default; `prc.api-py` is async-first with strong model/cache ideas that
+inspired the v2.4 vehicle catalog and request-safety polish.
+
 ## Design Goals
 
 | Goal | What it means |
@@ -40,6 +45,8 @@ The wrapper keeps user-facing helpers that make scripts and bots easier:
 - webhook signature verification and event routing;
 - custom command routing for PRC webhook messages starting with `;`;
 - ops utilities for snapshots, audit records, idempotency, and polling guidance.
+- v2.4 workflow helpers for vehicle catalogs, permission levels, wanted stars,
+  and emergency calls.
 
 ## When This Wrapper Fits
 

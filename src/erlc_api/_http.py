@@ -11,12 +11,12 @@ from typing import Any, Mapping
 import httpx
 
 from ._constants import BASE_URL, DEFAULT_TIMEOUT_S
-from ._errors import APIError, NetworkError, RateLimitError
+from ._errors import APIError, AuthError, NetworkError, RateLimitError
 
 
 def _default_user_agent() -> str:
     try:
-        version = importlib_metadata.version("erlc-api")
+        version = importlib_metadata.version("erlc-api.py")
     except importlib_metadata.PackageNotFoundError:
         version = "0+unknown"
     return f"erlc-api-python/{version}"
@@ -159,6 +159,16 @@ def _key_scope(global_key: str | None) -> str:
     return "global" if global_key else "server"
 
 
+def _mark_auth_failure(error: APIError, *, server_key: str, global_key: str | None) -> None:
+    if not isinstance(error, AuthError):
+        return
+    from .security import auth_failures
+
+    auth_failures.mark(server_key)
+    if global_key:
+        auth_failures.mark(global_key)
+
+
 class AsyncTransport:
     def __init__(self, settings: ClientSettings, *, global_key: str | None = None, rate_limiter: Any = None) -> None:
         self.settings = settings
@@ -235,7 +245,9 @@ class AsyncTransport:
                             await asyncio.sleep(sleep_s)
                         continue
                 raise err
-            raise _map_error(method_u, path, resp.status_code, raw)
+            error = _map_error(method_u, path, resp.status_code, raw)
+            _mark_auth_failure(error, server_key=server_key, global_key=self.global_key)
+            raise error
 
         raise APIError("PRC API request failed", method=method_u, path=path)
 
@@ -316,7 +328,9 @@ class SyncTransport:
                             time.sleep(sleep_s)
                         continue
                 raise err
-            raise _map_error(method_u, path, resp.status_code, raw)
+            error = _map_error(method_u, path, resp.status_code, raw)
+            _mark_auth_failure(error, server_key=server_key, global_key=self.global_key)
+            raise error
 
         raise APIError("PRC API request failed", method=method_u, path=path)
 

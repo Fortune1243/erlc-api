@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
+from enum import IntEnum
 from typing import Any, Mapping
 
 from ._errors import ModelDecodeError
@@ -140,6 +141,58 @@ def parse_player_identifier(value: Any) -> tuple[str | None, int | None]:
     return (name.strip() or None), parsed_id
 
 
+def _normalize_label(value: Any) -> str:
+    return " ".join(str(value or "").replace("_", " ").replace("-", " ").casefold().split())
+
+
+class PermissionLevel(IntEnum):
+    NORMAL = 0
+    HELPER = 1
+    MOD = 2
+    ADMIN = 3
+    CO_OWNER = 4
+    OWNER = 5
+
+    @classmethod
+    def parse(cls, value: Any) -> PermissionLevel:
+        if isinstance(value, PermissionLevel):
+            return value
+        text = _normalize_label(value)
+        aliases = {
+            "": cls.NORMAL,
+            "normal": cls.NORMAL,
+            "server helper": cls.HELPER,
+            "helper": cls.HELPER,
+            "server moderator": cls.MOD,
+            "moderator": cls.MOD,
+            "mod": cls.MOD,
+            "server administrator": cls.ADMIN,
+            "administrator": cls.ADMIN,
+            "admin": cls.ADMIN,
+            "server co owner": cls.CO_OWNER,
+            "server coowner": cls.CO_OWNER,
+            "co owner": cls.CO_OWNER,
+            "coowner": cls.CO_OWNER,
+            "server owner": cls.OWNER,
+            "owner": cls.OWNER,
+        }
+        return aliases.get(text, cls.NORMAL)
+
+    @property
+    def display_name(self) -> str:
+        return {
+            PermissionLevel.NORMAL: "Normal",
+            PermissionLevel.HELPER: "Server Helper",
+            PermissionLevel.MOD: "Server Moderator",
+            PermissionLevel.ADMIN: "Server Administrator",
+            PermissionLevel.CO_OWNER: "Server Co-Owner",
+            PermissionLevel.OWNER: "Server Owner",
+        }[self]
+
+    def __str__(self) -> str:
+        return self.display_name
+
+
 def _timestamp_to_datetime(value: int | None) -> datetime | None:
     if value is None:
         return None
@@ -189,6 +242,10 @@ class Player(Model):
     def location_typed(self) -> PlayerLocation | None:
         return self.location
 
+    @property
+    def permission_level(self) -> PermissionLevel:
+        return PermissionLevel.parse(self.permission)
+
 
 @dataclass(frozen=True)
 class StaffMember(Model):
@@ -203,6 +260,10 @@ class StaffMember(Model):
     @property
     def callsign(self) -> str | None:
         return None
+
+    @property
+    def permission_level(self) -> PermissionLevel:
+        return PermissionLevel.parse(self.role)
 
 
 @dataclass(frozen=True)
@@ -335,7 +396,7 @@ class Vehicle(Model):
 
     @property
     def model(self) -> str | None:
-        return self.name
+        return self.model_name
 
     @property
     def color(self) -> str | None:
@@ -344,6 +405,54 @@ class Vehicle(Model):
     @property
     def team(self) -> str | None:
         return None
+
+    @property
+    def full_name(self) -> str | None:
+        return self.name
+
+    @property
+    def parse_result(self):
+        from .vehicles import parse_vehicle_name
+
+        return parse_vehicle_name(self.name)
+
+    @property
+    def model_name(self) -> str | None:
+        return self.parse_result.model
+
+    @property
+    def year(self) -> int | None:
+        return self.parse_result.year
+
+    @property
+    def owner_name(self) -> str | None:
+        name, _ = parse_player_identifier(self.owner)
+        return name or _as_str(self.owner)
+
+    @property
+    def owner_id(self) -> int | None:
+        _, user_id = parse_player_identifier(self.owner)
+        return user_id
+
+    @property
+    def normalized_plate(self) -> str | None:
+        from .vehicles import normalize_plate
+
+        return normalize_plate(self.plate)
+
+    @property
+    def is_secondary(self) -> bool:
+        return self.parse_result.is_secondary
+
+    @property
+    def is_prestige(self) -> bool:
+        return self.parse_result.is_prestige
+
+    @property
+    def is_custom_texture(self) -> bool:
+        from .vehicles import is_custom_texture
+
+        return is_custom_texture(self.texture)
 
 
 @dataclass(frozen=True)
@@ -372,6 +481,7 @@ class EmergencyCall(Model):
 class CommandResult(Model):
     message: str | None = None
     success: bool | None = None
+    command_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -395,6 +505,14 @@ class ServerBundle(ServerInfo):
         if self.staff is None:
             return None
         return [member for member in self.staff.members if member.role == "Helper"]
+
+    @property
+    def player_vehicles(self):
+        if self.players is None or self.vehicles is None:
+            return None
+        from .vehicles import PlayerVehicleBundle
+
+        return PlayerVehicleBundle(self.players, self.vehicles)
 
 
 def _parse_location(raw: Mapping[str, Any]) -> PlayerLocation:
@@ -764,11 +882,20 @@ def decode_command_result(payload: Any, *, endpoint: str = "/v2/server/command")
     key, success = _pick(raw, "success", "Success", "ok")
     if key:
         consumed.add(key)
+    key, command_id = _pick(raw, "commandId", "CommandId", "command_id")
+    if key:
+        consumed.add(key)
     message_text = _as_str(message)
     success_value = _as_bool(success)
     if success_value is None and message_text is not None and message_text.lower() == "success":
         success_value = True
-    return CommandResult(message=message_text, success=success_value, raw=dict(raw), extra=_extra(raw, consumed))
+    return CommandResult(
+        message=message_text,
+        success=success_value,
+        command_id=_as_str(command_id),
+        raw=dict(raw),
+        extra=_extra(raw, consumed),
+    )
 
 
 def decode_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> ServerBundle:
@@ -830,6 +957,7 @@ __all__ = [
     "KillLogEntry",
     "ModCallEntry",
     "Model",
+    "PermissionLevel",
     "Player",
     "PlayerLocation",
     "QueueEntry",

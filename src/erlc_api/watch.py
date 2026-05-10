@@ -5,6 +5,7 @@ import time as time_mod
 from dataclasses import dataclass
 from typing import Any, AsyncIterator, Callable, Iterator
 
+from . import _utility as u
 from .diff import BundleDiff, Differ
 
 
@@ -16,7 +17,35 @@ class WatchEvent:
     snapshot: Any = None
 
 
-def _events_from_diff(diff: BundleDiff, snapshot: Any) -> list[WatchEvent]:
+def _player_key(item: Any) -> Any:
+    return u.get_value(item, "user_id") or u.get_value(item, "name") or u.get_value(item, "player")
+
+
+def _wanted_events(previous: Any, current: Any, diff: BundleDiff) -> list[WatchEvent]:
+    previous_players = {_player_key(player): player for player in u.players(previous) if _player_key(player) is not None}
+    events: list[WatchEvent] = []
+    for player in u.players(current):
+        old = previous_players.get(_player_key(player))
+        if old is None:
+            continue
+        before = u.get_value(old, "wanted_stars") or 0
+        after = u.get_value(player, "wanted_stars") or 0
+        if before == after:
+            continue
+        if before <= 0 < after:
+            event_type = "wanted_new"
+        elif before > 0 >= after:
+            event_type = "wanted_cleared"
+        elif after > before:
+            event_type = "wanted_escalated"
+        else:
+            event_type = "wanted_decreased"
+        events.append(WatchEvent(event_type, item=player, diff=diff, snapshot=current))
+        events.append(WatchEvent("wanted_change", item=player, diff=diff, snapshot=current))
+    return events
+
+
+def _events_from_diff(diff: BundleDiff, previous: Any, snapshot: Any) -> list[WatchEvent]:
     events = [WatchEvent("snapshot", diff=diff, snapshot=snapshot)]
     for item in diff.players.added:
         events.append(WatchEvent("player_join", item=item, diff=diff, snapshot=snapshot))
@@ -36,6 +65,7 @@ def _events_from_diff(diff: BundleDiff, snapshot: Any) -> list[WatchEvent]:
         events.append(WatchEvent("emergency_call", item=item, diff=diff, snapshot=snapshot))
     for item in diff.vehicles.added + diff.vehicles.removed:
         events.append(WatchEvent("vehicle_change", item=item, diff=diff, snapshot=snapshot))
+    events.extend(_wanted_events(previous, snapshot, diff))
     return events
 
 
@@ -65,13 +95,13 @@ class AsyncWatcher:
             await asyncio.sleep(self.interval_s)
             current = await self.api.server(server_key=self.server_key, all=True)
             diff = Differ(previous, current).bundle()
-            previous = current
-            for event in _events_from_diff(diff, current):
+            for event in _events_from_diff(diff, previous, current):
                 await self._emit(event)
                 emitted += 1
                 yield event
                 if limit is not None and emitted >= limit:
                     break
+            previous = current
 
 
 class Watcher:
@@ -98,13 +128,13 @@ class Watcher:
             time_mod.sleep(self.interval_s)
             current = self.api.server(server_key=self.server_key, all=True)
             diff = Differ(previous, current).bundle()
-            previous = current
-            for event in _events_from_diff(diff, current):
+            for event in _events_from_diff(diff, previous, current):
                 self._emit(event)
                 emitted += 1
                 yield event
                 if limit is not None and emitted >= limit:
                     break
+            previous = current
 
 
 __all__ = ["AsyncWatcher", "Watcher", "WatchEvent"]

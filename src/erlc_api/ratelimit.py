@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+import threading
 import time
 from typing import Any, Awaitable, Callable, Mapping
 
@@ -126,6 +127,14 @@ class _BaseLimiter:
         now = self._now()
         return max((state.wait_seconds(now) for state in self._candidates(method, path, key_scope=key_scope, bucket=bucket)), default=0.0)
 
+    def _lock_key(self, method: str, path: str, *, key_scope: str, bucket: str | None = None) -> tuple[str, str]:
+        candidates = self._candidates(method, path, key_scope=key_scope, bucket=bucket)
+        if candidates:
+            now = self._now()
+            state = max(candidates, key=lambda item: item.wait_seconds(now))
+            return (key_scope, state.bucket)
+        return (key_scope, bucket or _route_key(method, path))
+
     def _store(self, method: str, path: str, *, key_scope: str, state: RateLimitState) -> RateLimitState:
         route = _route_key(method, path)
         self._states[self._state_key(key_scope, state.bucket)] = state
@@ -203,12 +212,16 @@ class AsyncRateLimiter(_BaseLimiter):
     ) -> None:
         super().__init__(now=now)
         self._sleep = sleep or asyncio.sleep
+        self._locks: dict[tuple[str, str], asyncio.Lock] = {}
 
     async def before_request(self, method: str, path: str, *, key_scope: str = "server", bucket: str | None = None) -> float:
-        wait_s = self._wait_seconds(method, path, key_scope=key_scope, bucket=bucket)
-        if wait_s > 0:
-            await self._sleep(wait_s)
-        return wait_s
+        lock_key = self._lock_key(method, path, key_scope=key_scope, bucket=bucket)
+        lock = self._locks.setdefault(lock_key, asyncio.Lock())
+        async with lock:
+            wait_s = self._wait_seconds(method, path, key_scope=key_scope, bucket=bucket)
+            if wait_s > 0:
+                await self._sleep(wait_s)
+            return wait_s
 
 
 class RateLimiter(_BaseLimiter):
@@ -220,12 +233,16 @@ class RateLimiter(_BaseLimiter):
     ) -> None:
         super().__init__(now=now)
         self._sleep = sleep or time.sleep
+        self._locks: dict[tuple[str, str], threading.Lock] = {}
 
     def before_request(self, method: str, path: str, *, key_scope: str = "server", bucket: str | None = None) -> float:
-        wait_s = self._wait_seconds(method, path, key_scope=key_scope, bucket=bucket)
-        if wait_s > 0:
-            self._sleep(wait_s)
-        return wait_s
+        lock_key = self._lock_key(method, path, key_scope=key_scope, bucket=bucket)
+        lock = self._locks.setdefault(lock_key, threading.Lock())
+        with lock:
+            wait_s = self._wait_seconds(method, path, key_scope=key_scope, bucket=bucket)
+            if wait_s > 0:
+                self._sleep(wait_s)
+            return wait_s
 
 
 __all__ = [

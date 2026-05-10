@@ -124,17 +124,21 @@ Also assert that top-level `import erlc_api` does not import
 
 ## Workflow Utility Tests
 
-The 2.3 workflow utilities are easiest to test with fake clients and already
+The 2.3 and 2.4 workflow utilities are easiest to test with fake clients and already
 decoded models:
 
 ```python
 from erlc_api.bundle import AsyncBundle
 from erlc_api.status import StatusBuilder
 from erlc_api.cache import AsyncCachedClient
+from erlc_api.vehicles import VehicleTools
+from erlc_api.emergency import EmergencyCallTools
 
 bundle = await AsyncBundle(fake_api).dashboard()
 status = StatusBuilder(bundle).build()
 cached = AsyncCachedClient(fake_api, ttl_s=5)
+vehicles = VehicleTools(bundle.vehicles or [])
+calls = EmergencyCallTools(bundle.emergency_calls or [])
 ```
 
 Recommended scenarios:
@@ -147,6 +151,13 @@ Recommended scenarios:
 - cache hits, misses, TTL expiry, and command non-caching;
 - command-flow previews and missing template placeholders;
 - Discord payload dictionaries without importing a Discord library.
+- vehicle catalog parsing, plate normalization, duplicate plates, and owner
+  joins through `bundle.player_vehicles`;
+- emergency-call active/unresponded filters and nearest-call helpers;
+- `PermissionLevel`, `Filter.permission_at_least(...)`, wanted-star filters,
+  and watcher wanted-change events;
+- `CommandResult.command_id` parsing from `commandId`, `CommandId`, and
+  `command_id`.
 
 Keep top-level import tests updated whenever a new utility module is added.
 

@@ -92,6 +92,19 @@ disable command routes for it, and ask an operator to rotate or re-enter the key
 If your bot leaves or is removed from a Discord guild, remove that guild's stored
 server key from your own storage.
 
+The HTTP layer tracks repeated auth failures in memory by key fingerprint only:
+
+```python
+from erlc_api.security import auth_failures
+
+for record in auth_failures.snapshot():
+    if record.repeated:
+        logger.warning("Repeated ERLC auth failures for %s", record.fingerprint)
+```
+
+This is process-local guidance. It does not block keys, store raw secrets, or
+replace your own account/guild configuration lifecycle.
+
 ## Webhook Verification
 
 Verify the raw request body before trusting JSON:

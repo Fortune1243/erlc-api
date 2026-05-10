@@ -185,6 +185,46 @@ Common mistakes:
 - Using policy as a replacement for Discord permissions, web auth, or audit
   logging.
 
+## Command Metadata
+
+Signature:
+
+```python
+get_command_metadata(command: str | Command) -> CommandMetadata | None
+```
+
+Purpose: expose lightweight local hints for known commands without restricting
+`api.command(...)`.
+
+Return type: `CommandMetadata | None`.
+
+Minimal example:
+
+```python
+from erlc_api import PermissionLevel, get_command_metadata
+
+meta = get_command_metadata(":pm Avi hello")
+if meta is not None:
+    print(meta.display_name, meta.category, meta.minimum_permission)
+    assert meta.minimum_permission >= PermissionLevel.MOD
+```
+
+Metadata fields:
+
+| Field | Purpose |
+| --- | --- |
+| `name` | Normalized command name without `:`. |
+| `display_name` | Human-readable label for help text. |
+| `category` | Broad docs/diagnostics category. |
+| `minimum_permission` | Recommended `PermissionLevel` hint. |
+| `supports_target` | Whether the command commonly targets a player. |
+| `supports_multiple_targets` | Whether multiple targets may make sense. |
+| `supports_text` | Whether trailing message text commonly makes sense. |
+
+Important behavior: metadata is advisory. It helps command policies, Discord
+help text, diagnostics, and analytics, but the wrapper still accepts flexible
+commands and does not block unknown command names.
+
 ## `api.command`
 
 Async signature:

@@ -14,7 +14,7 @@ Use explicit imports:
 from erlc_api.webhooks import EventWebhookRouter, assert_valid_event_webhook_signature
 ```
 
-Reference: [PRC Event Webhook docs](https://apidocs.policeroleplay.community/for-developers/v2-api-reference/event-webhook)
+Reference: [ER:LC API docs](https://apidocs.erlc.gg/)
 
 For a higher-level framework-neutral router dedicated to in-game custom
 commands, use [Custom Commands Reference](./Custom-Commands-Reference.md).

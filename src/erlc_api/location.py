@@ -10,12 +10,12 @@ from .models import EmergencyCall, Player, PlayerLocation
 
 
 _MAP_URLS = {
-    ("fall", "blank"): "https://api.policeroleplay.community/maps/fall_blank.png",
-    ("fall", "postals"): "https://api.policeroleplay.community/maps/fall_postals.png",
-    ("winter", "blank"): "https://api.policeroleplay.community/maps/snow_blank.png",
-    ("winter", "postals"): "https://api.policeroleplay.community/maps/snow_postals.png",
-    ("snow", "blank"): "https://api.policeroleplay.community/maps/snow_blank.png",
-    ("snow", "postals"): "https://api.policeroleplay.community/maps/snow_postals.png",
+    ("fall", "blank"): "https://api.erlc.gg/maps/fall_blank.png",
+    ("fall", "postals"): "https://api.erlc.gg/maps/fall_postals.png",
+    ("winter", "blank"): "https://api.erlc.gg/maps/snow_blank.png",
+    ("winter", "postals"): "https://api.erlc.gg/maps/snow_postals.png",
+    ("snow", "blank"): "https://api.erlc.gg/maps/snow_blank.png",
+    ("snow", "postals"): "https://api.erlc.gg/maps/snow_postals.png",
 }
 
 

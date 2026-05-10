@@ -58,6 +58,8 @@ names = [
     "erlc_api.status",
     "erlc_api.command_flows",
     "erlc_api.security",
+    "erlc_api.vehicles",
+    "erlc_api.emergency",
     "erlc_api.webhooks",
 ]
 print(json.dumps([name for name in names if name in sys.modules]))

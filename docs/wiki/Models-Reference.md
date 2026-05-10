@@ -143,6 +143,7 @@ Fields:
 | `name` | `str | None` |
 | `user_id` | `int | None` |
 | `permission` | `str | None` |
+| `permission_level` | `PermissionLevel` property |
 | `callsign` | `str | None` |
 | `team` | `str | None` |
 | `location` | `PlayerLocation | None` |
@@ -164,6 +165,9 @@ for player in players:
 
 Common mistake: assuming `player.name` is always present. The parser is
 best-effort and keeps original data in `player.raw`.
+
+`permission` remains the raw PRC string. Use `permission_level` for ordered
+comparisons. See [Permission Levels](./Permission-Levels.md).
 
 ## Staff Models
 
@@ -295,6 +299,11 @@ Fields:
 | `plate` | `str | None` |
 | `color_hex` | `str | None` |
 | `color_name` | `str | None` |
+| `model_name` | `str | None` property |
+| `year` | `int | None` property |
+| `owner_name` | `str | None` property |
+| `owner_id` | `int | None` property |
+| `normalized_plate` | `str | None` property |
 
 Helpers:
 
@@ -303,6 +312,8 @@ Helpers:
 | `.model()` | `str | None` | Alias for `.name`. |
 | `.color()` | `str | None` | `color_name` or `color_hex`. |
 | `.team()` | `str | None` | Team value from extra/raw fields when available. |
+
+Vehicle catalog helpers are documented in [Vehicle Tools](./Vehicle-Tools.md).
 
 ### `VehicleColor`
 
@@ -341,6 +352,7 @@ Fields:
 | --- | --- |
 | `message` | `str | None` |
 | `success` | `bool | None` |
+| `command_id` | `str | None` |
 
 Returned by `command()`.
 

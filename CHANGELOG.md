@@ -1,6 +1,31 @@
 # Changelog
 
-## 2.3.1 - 2026-05-04
+Format follows the spirit of [Keep a Changelog](https://keepachangelog.com/).
+
+## [2.4.0] - 2026-05-04
+
+### Added
+
+- Added `PermissionLevel` with ordered permission comparisons via `player.permission_level` and `staff_member.permission_level`.
+- Added lazy `erlc_api.vehicles` with vehicle catalog parsing, `VehicleTools`, `PlayerVehicleBundle`, and vehicle model/year/plate/owner helpers, with catalog ergonomics inspired by TychoTeam/prc.api-py's MIT-licensed vehicle typing work.
+- Added lazy `erlc_api.emergency` with `EmergencyCallTools` for active, unresponded, team, nearest-call, and summary workflows.
+- Added wanted-star filters, finders, and watcher events for new, cleared, escalated, decreased, and general wanted changes.
+- Added `CommandResult.command_id` parsing for `commandId` style PRC responses.
+- Added command metadata for display names, categories, target hints, and recommended minimum permission levels.
+- Added `CONTRIBUTING.md`, `SECURITY.md`, `comparison.md`, and new docs pages for scaling, vehicles, emergency calls, permission levels, and wanted stars.
+
+### Changed
+
+- Improved dynamic rate-limiter safety with per-bucket/per-scope request queue locks.
+- Updated README and docs to highlight Python `>=3.11`, multi-server usage, custom-command webhooks, explicit caching, and v2.4.0 feature helpers.
+
+### Fixed
+
+- Renamed the misspelled root comparison file to `comparison.md`.
+
+## [2.3.1] - 2026-05-04
+
+### Added
 
 - Made dynamic client rate limiting default-on for `AsyncERLC` and `ERLC`.
 - Kept `rate_limited=False` as an explicit opt-out for applications with their own limiter.
@@ -13,7 +38,7 @@
 - Added known limitations and endpoint/support matrix documentation.
 - Added a regression test that documented extras resolve to `pyproject.toml` optional dependencies.
 
-## 2.3.0 - 2026-05-04
+## [2.3.0] - 2026-05-04
 
 - Added lazy workflow utility modules: `location`, `bundle`, `rules`, `multiserver`, `discord_tools`, `diagnostics`, `cache`, `status`, and `command_flows`.
 - Added bundle presets, typed status summaries, dependency-free Discord payload builders, memory TTL caching, command-flow previews, and multi-server read aggregation.
@@ -21,21 +46,21 @@
 - Fixed dynamic rate-limiter retry-after windows so observed cooldowns expire correctly.
 - Kept workflow utilities outside top-level `erlc_api` imports and avoided new base dependencies.
 
-## 2.2.0 - 2026-05-03
+## [2.2.0] - 2026-05-03
 
 - Added opt-in dynamic client rate limiting with `rate_limited=True`.
 - Added lazy `ratelimit` utilities for response-header-driven limiter state.
 - Added lazy `error_codes` utilities for explaining PRC error codes and exception mappings.
 - Reused the public error-code table for internal transport exception mapping.
 
-## 2.1.0 - 2026-05-03
+## [2.1.0] - 2026-05-03
 
 - Added ops utility modules: `snapshot`, `audit`, `idempotency`, and `limits`.
 - Added JSONL snapshot persistence, JSON-safe audit events, TTL dedupe helpers, and conservative polling guidance.
 - Added `custom_commands` as a framework-neutral router for PRC Event Webhook messages that start with `;`.
 - Kept new utilities lazy, stdlib-only, and outside top-level `erlc_api` exports.
 
-## 2.0.0 - 2026-05-03
+## [2.0.0] - 2026-05-03
 
 Breaking lightweight release.
 
@@ -51,6 +76,6 @@ Breaking lightweight release.
 - Added explicit lazy utility modules: `find`, `filter`, `sort`, `group`, `diff`, `wait`, `watch`, `format`, `analytics`, `export`, `moderation`, `time`, and `schema`.
 - Added utility extras: `export`, `time`, `rich`, `scheduling`, `utils`, and `all`.
 
-## 1.0.1 - 2026-03-05
+## [1.0.1] - 2026-03-05
 
 - Last release of the original grouped async API.

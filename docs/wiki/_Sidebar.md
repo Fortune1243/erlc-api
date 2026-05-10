@@ -18,10 +18,14 @@
 * [Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
 * [Commands Reference](./Commands-Reference.md)
 * [Function List](./Function-List.md)
+* [Permission Levels](./Permission-Levels.md)
 
 ## Utilities
 
 * [Utilities Reference](./Utilities-Reference.md)
+* [Vehicle Tools](./Vehicle-Tools.md)
+* [Emergency Calls](./Emergency-Calls.md)
+* [Wanted Stars](./Wanted-Stars.md)
 * [Ops Utilities Reference](./Ops-Utilities-Reference.md)
 * [Workflow Utilities Reference](./Workflow-Utilities-Reference.md)
 * [Formatting, Analytics, and Export](./Formatting-Analytics-and-Export.md)
@@ -35,6 +39,7 @@
 * [Custom Commands Reference](./Custom-Commands-Reference.md)
 * [Security and Secrets](./Security-and-Secrets.md)
 * [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
+* [Scaling Your App](./Scaling-Your-App.md)
 * [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
 * [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)
 * [Testing and Mocking](./Testing-and-Mocking.md)
