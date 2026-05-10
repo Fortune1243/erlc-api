@@ -38,8 +38,7 @@
 * [Security and Secrets](./Security-and-Secrets.md)
 * [Rate Limits, Retries, and Reliability](./Rate-Limits-Retries-and-Reliability.md)
 * [Scaling Your App](./Scaling-Your-App.md)
-* [Errors and Rate Limits](./Errors-and-Rate-Limits.md)
-* [Error Handling and Troubleshooting](./Error-Handling-and-Troubleshooting.md)
+* [Errors and Troubleshooting](./Errors-and-Troubleshooting.md)
 * [Testing and Mocking](./Testing-and-Mocking.md)
 
 ## Examples And Migration

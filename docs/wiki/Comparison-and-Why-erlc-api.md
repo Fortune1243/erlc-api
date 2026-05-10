@@ -4,7 +4,7 @@
 typed responses, flexible commands, lazy utilities, and framework-neutral
 webhook helpers.
 
-The root [comparison.md](../../comparison.md) contains a compact package
+The root [comparison.md](https://github.com/Fortune1243/erlc-api/blob/master/comparison.md) contains a compact package
 comparison table. In short: `erlc-api.py` is flat, sync+async, utility-rich, and
 typed by default; `prc.api-py` is async-first with strong model/cache ideas that
 inspired the v2.4 vehicle catalog and request-safety polish.

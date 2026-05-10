@@ -231,7 +231,7 @@ async def previewwarn(ctx, target: str, *, reason: str):
 - [Endpoint Reference](./Endpoint-Reference.md) — full list of available endpoints (`kill_logs`, `bans`, `vehicles`, etc.)
 - [Commands Reference](./Commands-Reference.md) — all supported in-game commands via `cmd.*`
 - [Workflow Utilities Reference](./Workflow-Utilities-Reference.md) — status snapshots, Discord payloads, cache, rules, and multi-server helpers
-- [Errors and Rate Limits](./Errors-and-Rate-Limits.md) — detailed error types and retry behaviour
+- [Errors and Troubleshooting](./Errors-and-Troubleshooting.md) — detailed error types and retry behaviour
 - [Waiters and Watchers](./Waiters-and-Watchers.md) — poll for changes and build live-update features
 
 ## Related Pages
