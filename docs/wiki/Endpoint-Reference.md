@@ -1,7 +1,7 @@
 # Endpoint Reference
 
-All endpoint methods exist on both `AsyncERLC` and `ERLC`. Async examples use
-`await`; sync examples remove `await`.
+All endpoint methods exist on both `AsyncClient`/`AsyncERLC` and
+`Client`/`ERLC`. Async examples use `await`; sync examples remove `await`.
 
 All endpoint methods accept:
 
@@ -17,6 +17,17 @@ All endpoint methods accept:
 | Command execution | v2 | `command` |
 | Bans | v1 | `bans` |
 | Custom escape hatch | caller chooses | `request` |
+
+## v3 Convenience Map
+
+| Need | Prefer |
+| --- | --- |
+| Dashboard-ready server state | `api.bundle()` |
+| Every supported v2 server section | `api.bundle("all")` |
+| Command logs | `api.logs("command")` |
+| All log sections | `api.logs("all")` |
+| No-HTTP command preview | `api.preview_command(command, policy=policy)` |
+| Env-based client setup | `Client.from_env()` or `AsyncClient.from_env()` |
 
 ## Support Matrix
 
@@ -37,6 +48,7 @@ All endpoint methods accept:
 | Method | Signature suffix | PRC endpoint | Default return type |
 | --- | --- | --- | --- |
 | `server` | `(..., include=None, all=False, players=False, staff=False, join_logs=False, queue=False, kill_logs=False, command_logs=False, mod_calls=False, emergency_calls=False, vehicles=False)` | `GET /v2/server` | `ServerBundle` |
+| `bundle` | `(request=None, *, include=None, exclude=None, server_key=None, raw=False)` | `GET /v2/server` | `ServerBundle` |
 | `players` | `(*, server_key=None, raw=False)` | `GET /v2/server?Players=true` | `list[Player]` |
 | `staff` | `(*, server_key=None, raw=False)` | `GET /v2/server?Staff=true` | `StaffList` |
 | `queue` | `(*, server_key=None, raw=False)` | `GET /v2/server?Queue=true` | `list[int]` |
@@ -46,9 +58,61 @@ All endpoint methods accept:
 | `mod_calls` | `(*, server_key=None, raw=False)` | `GET /v2/server?ModCalls=true` | `list[ModCallEntry]` |
 | `emergency_calls` | `(*, server_key=None, raw=False)` | `GET /v2/server?EmergencyCalls=true` | `list[EmergencyCall]` |
 | `vehicles` | `(*, server_key=None, raw=False)` | `GET /v2/server?Vehicles=true` | `list[Vehicle]` |
+| `logs` | `(kind, *, server_key=None, raw=False)` | `GET /v2/server?...` | list or `ServerLogs` |
 | `bans` | `(*, server_key=None, raw=False)` | `GET /v1/server/bans` | `BanList` |
-| `command` | `(command, *, server_key=None, raw=False, dry_run=False)` | `POST /v2/server/command` | `CommandResult` |
+| `preview_command` | `(command, *, policy=None)` | none | `CommandPreview` |
+| `command` | `(command, *, server_key=None, raw=False, dry_run=False, policy=None)` | `POST /v2/server/command` | `CommandResult` |
 | `request` | `(method, path, *, server_key=None, params=None, json=None, headers=None)` | any | raw decoded payload |
+
+## `bundle`
+
+Signature:
+
+```python
+await api.bundle(
+    request: str | Iterable[str] | BundleRequest | None = None,
+    *,
+    include: Iterable[str] | str | None = None,
+    exclude: Iterable[str] | str | None = None,
+    server_key: str | None = None,
+    raw: bool = False,
+) -> ServerBundle
+```
+
+Purpose: fetch a named v2 include preset without remembering the long
+`server(...)` flag list.
+
+Examples:
+
+```python
+dashboard = await api.bundle()
+everything = await api.bundle("all")
+ops = await api.bundle("dashboard", include="command_logs")
+```
+
+Default preset: `dashboard`, which includes players, staff, queue, vehicles,
+and emergency calls.
+
+## `logs`
+
+Signature:
+
+```python
+await api.logs(kind: str, *, server_key: str | None = None, raw: bool = False)
+```
+
+Purpose: fetch log sections by simple kind names.
+
+Accepted kinds:
+
+- `join`, `joins`, `join_logs`
+- `kill`, `kills`, `kill_logs`
+- `command`, `commands`, `cmd`, `command_logs`
+- `mod`, `mods`, `mod_calls`
+- `all`
+
+`logs("all")` returns `ServerLogs`. Individual kinds return the same typed
+lists as `join_logs()`, `kill_logs()`, `command_logs()`, and `mod_calls()`.
 
 ## `server`
 
@@ -361,8 +425,8 @@ See [Clients and Authentication](./Clients-and-Authentication.md#low-level-reque
 ## Related Pages
 
 - [Earlier in the guide: Clients and Authentication](./Clients-and-Authentication.md)
-- [Next in the guide: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
+- [Next in the guide: Models Reference](./Models-Reference.md)
 
 ---
 
-[Previous Page: Clients and Authentication](./Clients-and-Authentication.md) | [Next Page: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
+[Previous Page: Clients and Authentication](./Clients-and-Authentication.md) | [Next Page: Models Reference](./Models-Reference.md)

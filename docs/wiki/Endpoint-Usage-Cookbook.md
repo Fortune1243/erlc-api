@@ -8,23 +8,21 @@ want to perform but not the exact method shape.
 Fetch the sections most dashboards need:
 
 ```python
-bundle = await api.server(players=True, queue=True, staff=True)
+bundle = await api.bundle()
 
-players = bundle.players or []
-queue = bundle.queue or []
-staff = bundle.staff.members if bundle.staff else []
+players = bundle.players_list
+queue = bundle.queue_list
+staff = bundle.staff_members
 ```
 
 Return type: `ServerBundle`.
 
 Use this for status panels, staff dashboards, and periodic snapshots.
 
-For reusable dashboard fetches, use the 2.3 bundle preset helper:
+For custom presets, use `bundle(...)` with a preset or include/exclude names:
 
 ```python
-from erlc_api.bundle import AsyncBundle
-
-bundle = await AsyncBundle(api).dashboard()
+bundle = await api.bundle("dashboard", include="command_logs")
 ```
 
 To turn that bundle into a dashboard-ready object:
@@ -45,7 +43,7 @@ bundle = await api.server(all=True)
 ```
 
 This is convenient, but it can request more data than a command handler needs.
-Prefer explicit include flags in hot paths.
+Prefer `bundle()` presets or explicit include flags in hot paths.
 
 ## Cached Reads
 
@@ -81,7 +79,7 @@ Use this for fleet dashboards. Results collect per-server errors by default.
 ```python
 from erlc_api.find import Finder
 
-bundle = await api.server(players=True)
+bundle = await api.bundle(include="players", exclude=["staff", "queue", "vehicles", "emergency_calls"])
 player = Finder(bundle).player("Avi")
 ```
 
@@ -91,7 +89,7 @@ loops when exact matching is simpler.
 ## Moderation Logs
 
 ```python
-logs = await api.command_logs()
+logs = await api.logs("command")
 recent_warns = [entry for entry in logs if entry.command.startswith(":warn")]
 ```
 
@@ -121,16 +119,16 @@ from erlc_api import CommandPolicy, cmd
 
 policy = CommandPolicy(allowed={"h", "pm", "warn"}, max_length=120)
 
-await api.command(policy.validate("h hello"))
-await api.command(policy.validate(cmd.pm("Player", "hello")))
-await api.command(policy.validate(cmd("warn", "Player", "RDM")))
+await api.command("h hello", policy=policy)
+await api.command(cmd.pm("Player", "hello"), policy=policy)
+await api.command(cmd("warn", "Player", "RDM"), policy=policy)
 ```
 
-Use `dry_run=True` for previews:
+Use `preview_command(...)` for local previews:
 
 ```python
-preview = await api.command(cmd.pm("Player", "hello"), dry_run=True)
-print(preview.raw["command"])
+preview = await api.preview_command(cmd.pm("Player", "hello"), policy=policy)
+print(preview.command, preview.allowed)
 ```
 
 ## Raw JSON Escape Hatch
@@ -162,12 +160,12 @@ from erlc_api.export import Exporter
 from erlc_api.find import Finder
 from erlc_api.location import LocationTools
 
-bundle = await api.server(players=True, vehicles=True, emergency_calls=True)
+bundle = await api.bundle()
 player = Finder(bundle).player("Avi")
 summary = Analyzer(bundle).dashboard()
 markdown = Exporter(summary).markdown()
-if bundle.emergency_calls:
-    nearest = LocationTools(bundle).nearest_players_to_call(bundle.emergency_calls[0], limit=3)
+if bundle.emergency_calls_list:
+    nearest = LocationTools(bundle).nearest_players_to_call(bundle.emergency_calls_list[0], limit=3)
 ```
 
 Utilities stay lazy. Import only the modules you need.
@@ -199,10 +197,10 @@ commands.
 
 ## Related Pages
 
-- [Endpoint Reference](./Endpoint-Reference.md)
+- [Quickstart: Discord.py](./Quickstart-Discord.py.md)
 - [Models Reference](./Models-Reference.md)
-- [Utilities Reference](./Utilities-Reference.md)
+- [Migration to v3](./Migration-to-v3.md)
 
 ---
 
-[Previous Page: Endpoint Reference](./Endpoint-Reference.md) | [Next Page: Models Reference](./Models-Reference.md)
+[Previous Page: Quickstart: Discord.py](./Quickstart-Discord.py.md) | [Next Page: Migration to v3](./Migration-to-v3.md)

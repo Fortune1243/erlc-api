@@ -9,6 +9,7 @@ from typing import Any, Callable, Protocol, runtime_checkable
 READ_METHODS = frozenset(
     {
         "server",
+        "bundle",
         "players",
         "staff",
         "queue",
@@ -19,6 +20,7 @@ READ_METHODS = frozenset(
         "bans",
         "vehicles",
         "emergency_calls",
+        "logs",
         "health_check",
         "validate_key",
     }

@@ -14,9 +14,13 @@ def test_public_imports_are_lightweight() -> None:
 
     assert erlc_api.ERLC is not None
     assert erlc_api.AsyncERLC is not None
+    assert erlc_api.Client is erlc_api.ERLC
+    assert erlc_api.AsyncClient is erlc_api.AsyncERLC
     assert erlc_api.cmd is not None
     assert erlc_api.CommandPolicy is not None
+    assert erlc_api.CommandPreview is not None
     assert erlc_api.Player is not None
+    assert erlc_api.ServerLogs is not None
     assert isinstance(erlc_api.__version__, str)
     assert not hasattr(erlc_api, "EventWebhookRouter")
     assert not hasattr(erlc_api, "ClientConfig")
@@ -101,3 +105,24 @@ def test_documented_extras_exist_in_pyproject() -> None:
         advertised.update(extra.strip() for extra in match.split(",") if extra.strip())
 
     assert advertised <= extras
+
+
+def test_v3_docs_and_examples_are_present() -> None:
+    root = Path(__file__).resolve().parents[1]
+    examples = {
+        "basic_sync.py",
+        "basic_async.py",
+        "bundle_dashboard.py",
+        "safe_command.py",
+        "discord_bot.py",
+    }
+
+    assert (root / "docs" / "wiki" / "Migration-to-v3.md").exists()
+    assert examples <= {path.name for path in (root / "examples").glob("*.py")}
+
+    readme = (root / "README.md").read_text(encoding="utf-8")
+    migration = (root / "docs" / "wiki" / "Migration-to-v3.md").read_text(encoding="utf-8")
+
+    assert "Client.from_env" in readme
+    assert "api.bundle()" in readme
+    assert "preview_command" in migration

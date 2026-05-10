@@ -4,9 +4,11 @@
 
 No. This is an independent community wrapper for the ER:LC PRC API.
 
-## Is v2 breaking?
+## Is v3 breaking?
 
-Yes. The public API is now `AsyncERLC` and `ERLC` with flat methods.
+Yes. v3 keeps the v2 feature set but adds simpler aliases and helpers. Use
+`Client` / `AsyncClient`, `from_env()`, `bundle()`, `logs(...)`, and
+`preview_command(...)` for the easiest path.
 
 ## What is the package name?
 
@@ -17,7 +19,7 @@ pip install erlc-api.py
 ```
 
 ```python
-from erlc_api import AsyncERLC
+from erlc_api import AsyncClient
 ```
 
 ## How do I use multiple servers?
@@ -31,7 +33,8 @@ Yes. Pass `raw=True` to endpoint methods.
 
 ## Is `:log` blocked?
 
-No. v2 only performs minimal command syntax validation.
+No. v3 only performs minimal command syntax validation unless you pass
+`policy=` to `command(...)`.
 
 ## Where did cache, metrics, replay, and Redis go?
 
@@ -51,7 +54,7 @@ from erlc_api.snapshot import SnapshotStore
 ## Does the wrapper include a Discord bot framework?
 
 No. It includes framework-neutral helpers and Discord-safe formatting utilities.
-You bring your own bot framework and close over `AsyncERLC` where needed.
+You bring your own bot framework and close over `AsyncClient` where needed.
 
 ## How should I verify webhooks?
 
@@ -60,10 +63,10 @@ trusting the decoded JSON payload.
 
 ## Related Pages
 
-- [Getting Started](./Getting-Started.md)
+- [Clients and Authentication](./Clients-and-Authentication.md)
 - [Security and Secrets](./Security-and-Secrets.md)
 - [Webhooks Reference](./Webhooks-Reference.md)
 
 ---
 
-[Previous Page: Quickstart: Discord.py](./Quickstart-Discord.py.md) | [Next Page: Clients and Authentication](./Clients-and-Authentication.md)
+[Previous Page: Installation and Extras](./Installation-and-Extras.md) | [Next Page: Clients and Authentication](./Clients-and-Authentication.md)

@@ -48,4 +48,4 @@ admins = Filter(players).permission_at_least(PermissionLevel.ADMIN).all()
 
 ---
 
-[Previous Page: Function List](./Function-List.md) | [Next Page: Utilities Reference](./Utilities-Reference.md)
+[Previous Page: Commands Reference](./Commands-Reference.md) | [Next Page: Function List](./Function-List.md)

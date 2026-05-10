@@ -2,6 +2,25 @@
 
 Format follows the spirit of [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.0.0] - 2026-05-10
+
+### Added
+
+- Added `Client` and `AsyncClient` aliases for the existing sync and async clients.
+- Added `from_env(...)` constructors using `ERLC_SERVER_KEY` and optional `ERLC_GLOBAL_KEY`.
+- Added client-level `bundle(...)`, `logs(...)`, and `preview_command(...)` helpers for simpler common reads and command previews.
+- Added `policy=` support to `command(...)` so command policy validation can happen directly in the execution call.
+- Added `CommandPreview` and `ServerLogs` typed dataclasses.
+- Added list-like `StaffList` behavior, role-specific staff member helpers, `ServerBundle.included_sections`, `ServerBundle.has_section(...)`, and safe list properties such as `players_list`.
+- Added runnable examples under `examples/`.
+- Added a concise migration guide for v3.
+
+### Changed
+
+- Refocused README as a short introduction and moved detailed reference content into `docs/wiki`.
+- Reordered wiki navigation around reference-first docs, followed by examples and migration material.
+- Bumped package version metadata to `3.0.0`.
+
 ## [2.4.0] - 2026-05-04
 
 ### Added

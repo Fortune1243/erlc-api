@@ -78,6 +78,43 @@ class CommandMetadata:
     supports_multiple_targets: bool = False
     supports_text: bool = False
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "display_name": self.display_name,
+            "category": self.category,
+            "minimum_permission": self.minimum_permission.name,
+            "minimum_permission_display": self.minimum_permission.display_name,
+            "supports_target": self.supports_target,
+            "supports_multiple_targets": self.supports_multiple_targets,
+            "supports_text": self.supports_text,
+        }
+
+
+@dataclass(frozen=True)
+class CommandPreview:
+    """Local command preview produced without sending HTTP."""
+
+    command: str
+    name: str
+    allowed: bool
+    code: str | None = None
+    reason: str | None = None
+    metadata: CommandMetadata | None = None
+
+    def __bool__(self) -> bool:
+        return self.allowed
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "command": self.command,
+            "name": self.name,
+            "allowed": self.allowed,
+            "code": self.code,
+            "reason": self.reason,
+            "metadata": self.metadata.to_dict() if self.metadata is not None else None,
+        }
+
 
 def _metadata(
     name: str,
@@ -137,6 +174,39 @@ COMMAND_METADATA: dict[str, CommandMetadata] = {
 def get_command_metadata(command: str | Command) -> CommandMetadata | None:
     name = _command_name(normalize_command(command)).casefold()
     return COMMAND_METADATA.get(name)
+
+
+def preview_command(command: str | Command, *, policy: CommandPolicy | None = None) -> CommandPreview:
+    if policy is not None:
+        result = policy.check(command)
+        metadata = COMMAND_METADATA.get(result.name.casefold()) if result.name else None
+        return CommandPreview(
+            command=result.command,
+            name=result.name,
+            allowed=result.allowed,
+            code=result.code,
+            reason=result.reason,
+            metadata=metadata,
+        )
+
+    try:
+        normalized = normalize_command(command)
+    except (TypeError, ValueError) as exc:
+        return CommandPreview(
+            command=str(command),
+            name="",
+            allowed=False,
+            code="invalid_command",
+            reason=str(exc),
+        )
+
+    name = _command_name(normalized)
+    return CommandPreview(
+        command=normalized,
+        name=name,
+        allowed=True,
+        metadata=COMMAND_METADATA.get(name.casefold()),
+    )
 
 
 def _command_label(name: str) -> str:
@@ -294,6 +364,7 @@ __all__ = [
     "Command",
     "CommandFactory",
     "CommandMetadata",
+    "CommandPreview",
     "CommandPolicy",
     "CommandPolicyError",
     "CommandPolicyResult",
@@ -302,6 +373,7 @@ __all__ = [
     "get_command_metadata",
     "infer_command_success",
     "normalize_command",
+    "preview_command",
     "validate_command",
     "validate_command_syntax",
 ]

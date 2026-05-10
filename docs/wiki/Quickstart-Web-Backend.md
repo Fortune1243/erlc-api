@@ -12,16 +12,16 @@ This guide walks you through building a small FastAPI service that exposes ERLC 
 
 ## 2. Client lifecycle
 
-Use FastAPI's `lifespan` context manager to start and close `AsyncERLC` alongside the app. This replaces the deprecated `@app.on_event("startup"/"shutdown")` approach.
+Use FastAPI's `lifespan` context manager to start and close `AsyncClient` alongside the app. This replaces the deprecated `@app.on_event("startup"/"shutdown")` approach.
 
 ```python
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header, HTTPException
-from erlc_api import AsyncERLC, CommandPolicy, CommandPolicyError, cmd
+from erlc_api import AsyncClient, CommandPolicy, CommandPolicyError, cmd
 from erlc_api.cache import AsyncCachedClient
 
-api = AsyncERLC(os.environ["ERLC_SERVER_KEY"])
+api = AsyncClient.from_env()
 cached_api = AsyncCachedClient(api, ttl_s=5)
 announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
 admin_token = os.environ["ERLC_ADMIN_TOKEN"]
@@ -87,9 +87,9 @@ async def announce(body: AnnounceBody, x_admin_token: str | None = Header(defaul
     except CommandPolicyError as exc:
         raise HTTPException(status_code=400, detail=exc.result.reason) from exc
 
-    preview = await api.command(safe_command, dry_run=True)
-    result = await api.command(safe_command)
-    return {"ok": True, "command": preview.raw["command"], "message": result.message}
+    preview = await api.preview_command(safe_command, policy=announce_policy)
+    result = await api.command(preview.command, policy=announce_policy)
+    return {"ok": True, "command": preview.command, "message": result.message}
 ```
 
 ## 4. Error handling
@@ -119,13 +119,12 @@ Use status, bundle presets, and multi-server helpers for routes that feed
 dashboards.
 
 ```python
-from erlc_api.bundle import AsyncBundle
 from erlc_api.multiserver import AsyncMultiServer, ServerRef
 from erlc_api.status import StatusBuilder
 
 @app.get("/dashboard")
 async def dashboard():
-    bundle = await AsyncBundle(cached_api).dashboard()
+    bundle = await cached_api.bundle()
     return StatusBuilder(bundle).build().to_dict()
 
 servers = [
@@ -152,7 +151,7 @@ The API will be available at `http://localhost:8000`. FastAPI generates interact
 ## 7. Common mistakes
 
 - **Using `@app.on_event("startup"/"shutdown")`.** These are deprecated in modern FastAPI. Use the `lifespan` context manager instead.
-- **Sharing one `AsyncERLC` instance across threads.** The client is not thread-safe; use it only within the async event loop FastAPI runs on.
+- **Sharing one `AsyncClient` instance across threads.** The client is not thread-safe; use it only within the async event loop FastAPI runs on.
 - **Returning model objects directly.** `erlc_api` models are dataclasses, not Pydantic models. Call `.to_dict()` or map fields manually before returning from a route.
 - **Not handling `RateLimitError`.** ERLC enforces per-endpoint limits. Without handling, FastAPI returns a 500 to the caller instead of a meaningful 429.
 - **Starting the client outside `lifespan`.** Calling `await api.start()` at module level runs before an event loop exists and will raise a runtime error.

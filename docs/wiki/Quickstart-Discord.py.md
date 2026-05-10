@@ -12,7 +12,7 @@ This guide walks you through building a basic Discord bot that talks to a live E
 
 ## 2. Client lifecycle
 
-`AsyncERLC` must be started before commands run and closed when the bot shuts down. The right place for this in discord.py v2 is `setup_hook` (runs once before the bot connects) and an overridden `close`.
+`AsyncClient` must be started before commands run and closed when the bot shuts down. The right place for this in discord.py v2 is `setup_hook` (runs once before the bot connects) and an overridden `close`.
 
 ```python
 import logging
@@ -20,7 +20,7 @@ import os
 
 import discord
 from discord.ext import commands
-from erlc_api import AsyncERLC, CommandPolicy, CommandPolicyError, cmd
+from erlc_api import AsyncClient, CommandPolicy, CommandPolicyError, cmd
 from erlc_api.cache import AsyncCachedClient
 from erlc_api.security import key_fingerprint
 
@@ -32,11 +32,10 @@ intents.message_content = True
 class ERLCBot(commands.Bot):
     def __init__(self) -> None:
         super().__init__(command_prefix="!", intents=intents)
-        server_key = os.environ["ERLC_SERVER_KEY"]
-        self.api = AsyncERLC(server_key)
+        self.api = AsyncClient.from_env()
         self.cached_api = AsyncCachedClient(self.api, ttl_s=5)
         self.announce_policy = CommandPolicy(allowed={"h"}, max_length=120)
-        logger.info("Configured ERLC key %s", key_fingerprint(server_key))
+        logger.info("Configured ERLC key %s", key_fingerprint(self.api.server_key or ""))
 
     async def setup_hook(self) -> None:
         await self.api.start()
@@ -101,9 +100,12 @@ async def announce(ctx, *, message: str):
         await ctx.reply(exc.result.reason or "That command is not allowed.", mention_author=False)
         return
 
-    preview = await bot.api.command(safe_command, dry_run=True)
-    logger.info("Discord announce by %s: %s", ctx.author.id, preview.raw["command"])
-    result = await bot.api.command(safe_command)
+    preview = await bot.api.preview_command(safe_command, policy=bot.announce_policy)
+    if not preview.allowed:
+        await ctx.reply(preview.reason or "That command is not allowed.", mention_author=False)
+        return
+    logger.info("Discord announce by %s: %s", ctx.author.id, preview.command)
+    result = await bot.api.command(preview.command, policy=bot.announce_policy)
     await ctx.send(result.message or "Announcement sent.")
 ```
 
@@ -213,7 +215,7 @@ async def previewwarn(ctx, target: str, *, reason: str):
 ## 9. Common mistakes
 
 - **Starting the client in `on_ready` instead of `setup_hook`.** `on_ready` fires on every reconnect, so `api.start()` would be called multiple times. `setup_hook` runs exactly once.
-- **Using `ERLC` (sync) instead of `AsyncERLC`.** Calling a synchronous client inside an async bot blocks the event loop.
+- **Using `Client` (sync) instead of `AsyncClient`.** Calling a synchronous client inside an async bot blocks the event loop.
 - **Not handling `RateLimitError`.** ERLC enforces per-endpoint rate limits. Unhandled, this raises an exception and silently drops your response.
 - **Missing `intents.message_content = True`.** Without this intent the bot never sees message text and prefix commands will not fire.
 - **Calling `await api.players()` before `setup_hook` completes.** The client raises if you call endpoints before `start()` has run.
@@ -235,8 +237,8 @@ async def previewwarn(ctx, target: str, *, reason: str):
 ## Related Pages
 
 - [Earlier in the guide: Quickstart: Web Backend](./Quickstart-Web-Backend.md)
-- [Next in the guide: FAQ](./FAQ.md)
+- [Next in the guide: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
 
 ---
 
-[Previous Page: Quickstart: Web Backend](./Quickstart-Web-Backend.md) | [Next Page: FAQ](./FAQ.md)
+[Previous Page: Quickstart: Web Backend](./Quickstart-Web-Backend.md) | [Next Page: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)

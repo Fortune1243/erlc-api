@@ -1,23 +1,23 @@
 # erlc-api.py Documentation
 
-`erlc-api.py` v2 is a lightweight sync and async wrapper for the ER:LC PRC API.
-It uses flat clients, typed dataclasses by default, raw JSON escape hatches,
-flexible commands, default-on process-local rate limiting, command policy
-guardrails, vehicle catalog tools, wanted-star helpers, and explicit lazy
+`erlc-api.py` v3 is a lightweight sync and async wrapper for the ER:LC PRC API.
+It uses flat clients, simple aliases, typed dataclasses by default, raw JSON
+escape hatches, dashboard bundle helpers, flexible commands, default-on
+process-local rate limiting, command policy guardrails, and explicit lazy
 utility modules.
 
 ## Recommended Reading Path
 
 1. [Installation and Extras](./Installation-and-Extras.md)
-2. [Getting Started](./Getting-Started.md)
-3. [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
-4. [Quickstart: Discord.py](./Quickstart-Discord.py.md)
-5. [Clients and Authentication](./Clients-and-Authentication.md)
-6. [Endpoint Reference](./Endpoint-Reference.md)
-7. [Models Reference](./Models-Reference.md)
-8. [Commands Reference](./Commands-Reference.md)
-9. [Utilities Reference](./Utilities-Reference.md)
-10. [Webhooks Reference](./Webhooks-Reference.md)
+2. [Clients and Authentication](./Clients-and-Authentication.md)
+3. [Endpoint Reference](./Endpoint-Reference.md)
+4. [Models Reference](./Models-Reference.md)
+5. [Commands Reference](./Commands-Reference.md)
+6. [Utilities Reference](./Utilities-Reference.md)
+7. [Getting Started](./Getting-Started.md)
+8. [Quickstart: Web Backend](./Quickstart-Web-Backend.md)
+9. [Quickstart: Discord.py](./Quickstart-Discord.py.md)
+10. [Migration to v3](./Migration-to-v3.md)
 
 ## Start
 
@@ -91,7 +91,8 @@ utility modules.
 
 ## Migration
 
-- [Migration to v2](./Migration-to-v2.md): breaking changes and migration
+- [Migration to v3](./Migration-to-v3.md): v3 simplification guide and before/after examples.
+- [Migration to v2](./Migration-to-v2.md): v2 breaking changes and migration
   checklist.
 - [Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md): design goals
   and why the wrapper stays lightweight.

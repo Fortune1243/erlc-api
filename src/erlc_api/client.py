@@ -2,14 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import os
 from typing import Any, Iterable, Mapping
 
 from ._constants import BASE_URL
 from ._errors import APIError, AuthError, NetworkError, RateLimitError
 from ._http import AsyncTransport, ClientSettings, SyncTransport
-from .commands import Command, normalize_command
+from .commands import Command, CommandPolicy, CommandPreview, normalize_command, preview_command as _preview_command
 from .models import (
     BanList,
+    CommandLogEntry,
     CommandResult,
     EmergencyCall,
     JoinLogEntry,
@@ -17,6 +19,7 @@ from .models import (
     ModCallEntry,
     Player,
     ServerBundle,
+    ServerLogs,
     StaffList,
     Vehicle,
     decode_bans,
@@ -29,6 +32,7 @@ from .models import (
     decode_players,
     decode_queue,
     decode_server_bundle,
+    decode_server_logs,
     decode_staff,
     decode_vehicles,
 )
@@ -61,6 +65,30 @@ _V2_INCLUDE_PARAMS = {
     "vehicles": "Vehicles",
 }
 
+_LOG_KIND_ALIASES = {
+    "join": "join_logs",
+    "joins": "join_logs",
+    "join_log": "join_logs",
+    "join_logs": "join_logs",
+    "kill": "kill_logs",
+    "kills": "kill_logs",
+    "kill_log": "kill_logs",
+    "kill_logs": "kill_logs",
+    "command": "command_logs",
+    "commands": "command_logs",
+    "cmd": "command_logs",
+    "cmds": "command_logs",
+    "command_log": "command_logs",
+    "command_logs": "command_logs",
+    "mod": "mod_calls",
+    "mods": "mod_calls",
+    "mod_call": "mod_calls",
+    "mod_calls": "mod_calls",
+    "all": "all",
+    "logs": "all",
+    "server_logs": "all",
+}
+
 
 def _settings(
     *,
@@ -81,6 +109,59 @@ def _default_key(default: str | None, override: str | None) -> str:
     if not key:
         raise ValueError("A server key is required. Pass it to the client or as server_key=...")
     return key
+
+
+def _env_keys(
+    *,
+    server_key: str | None,
+    global_key: str | None,
+    server_key_var: str,
+    global_key_var: str,
+) -> tuple[str, str | None]:
+    resolved_server_key = server_key if server_key is not None else os.environ.get(server_key_var)
+    key = (resolved_server_key or "").strip()
+    if not key:
+        raise ValueError(f"A server key is required. Set {server_key_var} or pass server_key=...")
+
+    resolved_global_key = global_key if global_key is not None else os.environ.get(global_key_var)
+    global_text = (resolved_global_key or "").strip()
+    return key, global_text or None
+
+
+def _names(value: Iterable[str] | str | None) -> list[str]:
+    if value is None:
+        return []
+    return [value] if isinstance(value, str) else list(value)
+
+
+def _bundle_kwargs(
+    request: str | Iterable[str] | Any | None,
+    *,
+    include: Iterable[str] | str | None,
+    exclude: Iterable[str] | str | None,
+) -> dict[str, bool]:
+    from .bundle import resolve_request
+
+    bundle_request = resolve_request(request)
+    include_names = _names(include)
+    exclude_names = _names(exclude)
+    if include_names:
+        bundle_request = bundle_request.include(*include_names)
+    if exclude_names:
+        bundle_request = bundle_request.exclude(*exclude_names)
+    return bundle_request.server_kwargs()
+
+
+def _log_kind(kind: str) -> str:
+    key = kind.strip().lower().replace("-", "_")
+    try:
+        return _LOG_KIND_ALIASES[key]
+    except KeyError as exc:
+        raise ValueError(f"Unknown log kind: {kind}") from exc
+
+
+def _command_text(command: str | Command, policy: CommandPolicy | None) -> str:
+    return policy.validate(command) if policy is not None else normalize_command(command)
 
 
 def _include_params(
@@ -162,6 +243,24 @@ class AsyncERLC:
         self._transport = transport or AsyncTransport(self.settings, global_key=self.global_key)
         self.rate_limited = rate_limited
         _configure_async_rate_limiter(self._transport, rate_limited)
+
+    @classmethod
+    def from_env(
+        cls,
+        *,
+        server_key: str | None = None,
+        global_key: str | None = None,
+        server_key_var: str = "ERLC_SERVER_KEY",
+        global_key_var: str = "ERLC_GLOBAL_KEY",
+        **kwargs: Any,
+    ) -> AsyncERLC:
+        resolved_server_key, resolved_global_key = _env_keys(
+            server_key=server_key,
+            global_key=global_key,
+            server_key_var=server_key_var,
+            global_key_var=global_key_var,
+        )
+        return cls(resolved_server_key, global_key=resolved_global_key, **kwargs)
 
     @property
     def rate_limits(self) -> Any:
@@ -257,7 +356,7 @@ class AsyncERLC:
         payload = await self.server(server_key=server_key, raw=True, kill_logs=True)
         return payload["KillLogs"] if raw else decode_kill_logs(payload.get("KillLogs", []))
 
-    async def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Any]:
+    async def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[CommandLogEntry]:
         payload = await self.server(server_key=server_key, raw=True, command_logs=True)
         return payload["CommandLogs"] if raw else decode_command_logs(payload.get("CommandLogs", []))
 
@@ -273,9 +372,48 @@ class AsyncERLC:
         payload = await self.server(server_key=server_key, raw=True, vehicles=True)
         return payload["Vehicles"] if raw else decode_vehicles(payload.get("Vehicles", []))
 
+    async def bundle(
+        self,
+        request: str | Iterable[str] | Any | None = None,
+        *,
+        include: Iterable[str] | str | None = None,
+        exclude: Iterable[str] | str | None = None,
+        server_key: str | None = None,
+        raw: bool = False,
+    ) -> Any | ServerBundle:
+        return await self.server(
+            server_key=server_key,
+            raw=raw,
+            **_bundle_kwargs(request, include=include, exclude=exclude),
+        )
+
+    async def logs(self, kind: str, *, server_key: str | None = None, raw: bool = False) -> Any | ServerLogs | list[Any]:
+        resolved = _log_kind(kind)
+        if resolved == "join_logs":
+            return await self.join_logs(server_key=server_key, raw=raw)
+        if resolved == "kill_logs":
+            return await self.kill_logs(server_key=server_key, raw=raw)
+        if resolved == "command_logs":
+            return await self.command_logs(server_key=server_key, raw=raw)
+        if resolved == "mod_calls":
+            return await self.mod_calls(server_key=server_key, raw=raw)
+
+        payload = await self.server(
+            server_key=server_key,
+            raw=True,
+            join_logs=True,
+            kill_logs=True,
+            command_logs=True,
+            mod_calls=True,
+        )
+        return payload if raw else decode_server_logs(payload)
+
     async def bans(self, *, server_key: str | None = None, raw: bool = False) -> Any | BanList:
         payload = await self.request("GET", "/v1/server/bans", server_key=server_key)
         return payload if raw else decode_bans(payload)
+
+    async def preview_command(self, command: str | Command, *, policy: CommandPolicy | None = None) -> CommandPreview:
+        return _preview_command(command, policy=policy)
 
     async def command(
         self,
@@ -284,8 +422,9 @@ class AsyncERLC:
         server_key: str | None = None,
         raw: bool = False,
         dry_run: bool = False,
+        policy: CommandPolicy | None = None,
     ) -> Any | CommandResult:
-        command_text = normalize_command(command)
+        command_text = _command_text(command, policy)
         if dry_run:
             payload = {"message": "Dry-run validation passed. Command not sent.", "success": True, "command": command_text}
             return payload if raw else decode_command_result(payload)
@@ -335,6 +474,24 @@ class ERLC:
         self._transport = transport or SyncTransport(self.settings, global_key=self.global_key)
         self.rate_limited = rate_limited
         _configure_sync_rate_limiter(self._transport, rate_limited)
+
+    @classmethod
+    def from_env(
+        cls,
+        *,
+        server_key: str | None = None,
+        global_key: str | None = None,
+        server_key_var: str = "ERLC_SERVER_KEY",
+        global_key_var: str = "ERLC_GLOBAL_KEY",
+        **kwargs: Any,
+    ) -> ERLC:
+        resolved_server_key, resolved_global_key = _env_keys(
+            server_key=server_key,
+            global_key=global_key,
+            server_key_var=server_key_var,
+            global_key_var=global_key_var,
+        )
+        return cls(resolved_server_key, global_key=resolved_global_key, **kwargs)
 
     @property
     def rate_limits(self) -> Any:
@@ -430,7 +587,7 @@ class ERLC:
         payload = self.server(server_key=server_key, raw=True, kill_logs=True)
         return payload["KillLogs"] if raw else decode_kill_logs(payload.get("KillLogs", []))
 
-    def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[Any]:
+    def command_logs(self, *, server_key: str | None = None, raw: bool = False) -> Any | list[CommandLogEntry]:
         payload = self.server(server_key=server_key, raw=True, command_logs=True)
         return payload["CommandLogs"] if raw else decode_command_logs(payload.get("CommandLogs", []))
 
@@ -446,9 +603,48 @@ class ERLC:
         payload = self.server(server_key=server_key, raw=True, vehicles=True)
         return payload["Vehicles"] if raw else decode_vehicles(payload.get("Vehicles", []))
 
+    def bundle(
+        self,
+        request: str | Iterable[str] | Any | None = None,
+        *,
+        include: Iterable[str] | str | None = None,
+        exclude: Iterable[str] | str | None = None,
+        server_key: str | None = None,
+        raw: bool = False,
+    ) -> Any | ServerBundle:
+        return self.server(
+            server_key=server_key,
+            raw=raw,
+            **_bundle_kwargs(request, include=include, exclude=exclude),
+        )
+
+    def logs(self, kind: str, *, server_key: str | None = None, raw: bool = False) -> Any | ServerLogs | list[Any]:
+        resolved = _log_kind(kind)
+        if resolved == "join_logs":
+            return self.join_logs(server_key=server_key, raw=raw)
+        if resolved == "kill_logs":
+            return self.kill_logs(server_key=server_key, raw=raw)
+        if resolved == "command_logs":
+            return self.command_logs(server_key=server_key, raw=raw)
+        if resolved == "mod_calls":
+            return self.mod_calls(server_key=server_key, raw=raw)
+
+        payload = self.server(
+            server_key=server_key,
+            raw=True,
+            join_logs=True,
+            kill_logs=True,
+            command_logs=True,
+            mod_calls=True,
+        )
+        return payload if raw else decode_server_logs(payload)
+
     def bans(self, *, server_key: str | None = None, raw: bool = False) -> Any | BanList:
         payload = self.request("GET", "/v1/server/bans", server_key=server_key)
         return payload if raw else decode_bans(payload)
+
+    def preview_command(self, command: str | Command, *, policy: CommandPolicy | None = None) -> CommandPreview:
+        return _preview_command(command, policy=policy)
 
     def command(
         self,
@@ -457,8 +653,9 @@ class ERLC:
         server_key: str | None = None,
         raw: bool = False,
         dry_run: bool = False,
+        policy: CommandPolicy | None = None,
     ) -> Any | CommandResult:
-        command_text = normalize_command(command)
+        command_text = _command_text(command, policy)
         if dry_run:
             payload = {"message": "Dry-run validation passed. Command not sent.", "success": True, "command": command_text}
             return payload if raw else decode_command_result(payload)
@@ -487,8 +684,14 @@ class ERLC:
         return self.validate_key(server_key=server_key)
 
 
+Client = ERLC
+AsyncClient = AsyncERLC
+
+
 __all__ = [
+    "AsyncClient",
     "AsyncERLC",
+    "Client",
     "ERLC",
     "ValidationResult",
     "ValidationStatus",

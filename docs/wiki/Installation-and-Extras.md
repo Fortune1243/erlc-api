@@ -14,7 +14,7 @@ pip install erlc-api.py
 Import in Python with the package name:
 
 ```python
-from erlc_api import AsyncERLC, ERLC, cmd
+from erlc_api import AsyncClient, Client, cmd
 ```
 
 This is normal for Python packages whose published name contains punctuation.
@@ -83,16 +83,16 @@ Run checks:
 ```powershell
 $env:PYTHONPATH = "src"
 python -m pytest -q
-python -m ruff check src tests scripts
+python -m ruff check src tests scripts examples
 ```
 
 ## Verifying Installation
 
 ```python
-from erlc_api import AsyncERLC, ERLC, cmd
+from erlc_api import AsyncClient, Client, cmd
 from erlc_api.find import Finder
 
-print(AsyncERLC, ERLC, cmd, Finder)
+print(AsyncClient, Client, cmd, Finder)
 ```
 
 If this imports successfully, the base package and lazy utility import path are
@@ -108,10 +108,10 @@ working.
 
 ## Related Pages
 
-- [Getting Started](./Getting-Started.md)
+- [FAQ](./FAQ.md)
 - [Security and Secrets](./Security-and-Secrets.md)
 - [Function List](./Function-List.md)
 
 ---
 
-[Previous Page: Home](./Home.md) | [Next Page: Getting Started](./Getting-Started.md)
+[Previous Page: Home](./Home.md) | [Next Page: FAQ](./FAQ.md)

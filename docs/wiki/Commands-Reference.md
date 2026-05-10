@@ -1,6 +1,6 @@
 # Commands Reference
 
-`erlc-api.py` v2 uses flexible command syntax. You can pass plain strings, immutable
+`erlc-api.py` v3 uses flexible command syntax. You can pass plain strings, immutable
 `Command` values, or the `cmd` factory.
 
 ## `normalize_command`
@@ -126,7 +126,7 @@ Important behavior:
 
 Common mistakes:
 
-- Expecting a hard-coded command allowlist. v2 avoids rigid command helpers.
+- Expecting a hard-coded command allowlist. v3 avoids rigid command helpers.
 - Passing player/message parts that contain leading/trailing whitespace and
   expecting it to be preserved. Parts are stripped.
 
@@ -225,6 +225,48 @@ Important behavior: metadata is advisory. It helps command policies, Discord
 help text, diagnostics, and analytics, but the wrapper still accepts flexible
 commands and does not block unknown command names.
 
+## `api.preview_command`
+
+Async signature:
+
+```python
+await api.preview_command(command: str | Command, *, policy: CommandPolicy | None = None) -> CommandPreview
+```
+
+Sync signature:
+
+```python
+api.preview_command(command: str | Command, *, policy: CommandPolicy | None = None) -> CommandPreview
+```
+
+Purpose: normalize and optionally policy-check a command without sending HTTP.
+
+Return type: `CommandPreview`.
+
+Minimal example:
+
+```python
+from erlc_api import AsyncClient, CommandPolicy, cmd
+
+policy = CommandPolicy(allowed={"h"}, max_length=120)
+
+async with AsyncClient.from_env() as api:
+    preview = await api.preview_command(cmd.h("Restart soon"), policy=policy)
+    if preview.allowed:
+        await api.command(preview.command, policy=policy)
+```
+
+Fields:
+
+| Field | Purpose |
+| --- | --- |
+| `command` | Normalized command string when valid. |
+| `name` | Command name without `:`. |
+| `allowed` | Whether syntax and policy allow it. |
+| `code` | Policy or validation failure code. |
+| `reason` | Human-readable failure reason. |
+| `metadata` | Optional `CommandMetadata` for known commands. |
+
 ## `api.command`
 
 Async signature:
@@ -236,6 +278,7 @@ await api.command(
     server_key: str | None = None,
     raw: bool = False,
     dry_run: bool = False,
+    policy: CommandPolicy | None = None,
 ) -> CommandResult
 ```
 
@@ -248,6 +291,7 @@ api.command(
     server_key: str | None = None,
     raw: bool = False,
     dry_run: bool = False,
+    policy: CommandPolicy | None = None,
 ) -> CommandResult
 ```
 
@@ -258,22 +302,22 @@ Return type: `CommandResult` by default, raw payload with `raw=True`.
 Minimal async example:
 
 ```python
-from erlc_api import AsyncERLC, CommandPolicy, cmd
+from erlc_api import AsyncClient, CommandPolicy, cmd
 
-async with AsyncERLC("server-key") as api:
+async with AsyncClient.from_env() as api:
     policy = CommandPolicy(allowed={"pm"}, max_length=120)
-    result = await api.command(policy.validate(cmd.pm("Avi", "hello")))
+    result = await api.command(cmd.pm("Avi", "hello"), policy=policy)
     print(result.message)
 ```
 
 Minimal sync example:
 
 ```python
-from erlc_api import ERLC, CommandPolicy
+from erlc_api import Client, CommandPolicy
 
-with ERLC("server-key") as api:
+with Client.from_env() as api:
     policy = CommandPolicy(allowed={"h"}, max_length=120)
-    print(api.command(policy.validate("h hello")).message)
+    print(api.command("h hello", policy=policy).message)
 ```
 
 Important options:
@@ -283,6 +327,7 @@ Important options:
 | `server_key=` | Override the client's default server key. |
 | `raw=True` | Return exact PRC JSON. |
 | `dry_run=True` | Validate and return a local result without sending HTTP. |
+| `policy=` | Validate with `CommandPolicy` before sending HTTP. |
 
 Dry-run:
 
@@ -352,8 +397,8 @@ See [Moderation Helpers](./Moderation-Helpers.md).
 ## Related Pages
 
 - [Earlier in the guide: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
-- [Next in the guide: Function List](./Function-List.md)
+- [Next in the guide: Permission Levels](./Permission-Levels.md)
 
 ---
 
-[Previous Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) | [Next Page: Function List](./Function-List.md)
+[Previous Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md) | [Next Page: Permission Levels](./Permission-Levels.md)

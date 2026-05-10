@@ -105,17 +105,29 @@ Helpers:
 
 | Helper | Return type | Purpose |
 | --- | --- | --- |
-| `.server_name()` | `str | None` | Alias for `.name`. |
-| `.helpers()` | `list[StaffMember] | None` | Helper staff entries if staff data was included. |
+| `.server_name` | `str | None` | Alias for `.name`. |
+| `.helpers` | `list[StaffMember] | None` | Helper staff entries if staff data was included. |
+| `.players_list` | `list[Player]` | Empty list when players were not included. |
+| `.queue_list` | `list[int]` | Empty list when queue was not included. |
+| `.vehicles_list` | `list[Vehicle]` | Empty list when vehicles were not included. |
+| `.join_logs_list` | `list[JoinLogEntry]` | Empty list when join logs were not included. |
+| `.kill_logs_list` | `list[KillLogEntry]` | Empty list when kill logs were not included. |
+| `.command_logs_list` | `list[CommandLogEntry]` | Empty list when command logs were not included. |
+| `.mod_calls_list` | `list[ModCallEntry]` | Empty list when mod calls were not included. |
+| `.emergency_calls_list` | `list[EmergencyCall]` | Empty list when emergency calls were not included. |
+| `.staff_members` | `list[StaffMember]` | Empty list when staff was not included. |
+| `.included_sections` | `frozenset[str]` | Section names present in the bundle. |
+| `.has_section(name)` | `bool` | Check whether a section was included. |
 
 Minimal example:
 
 ```python
-bundle = await api.server(all=True)
-print(len(bundle.players or []), len(bundle.queue or []))
+bundle = await api.bundle()
+print(len(bundle.players_list), len(bundle.queue_list))
 ```
 
-Common mistake: not checking optional sections for `None`.
+Common mistake: using optional fields without checking `None`. Prefer the safe
+list helpers for display and counting.
 
 ## Player Models
 
@@ -199,17 +211,23 @@ Fields:
 | `mods` | `dict[int, str]` |
 | `helpers` | `dict[int, str]` |
 
-Helper:
+Helpers:
 
 | Helper | Return type | Purpose |
 | --- | --- | --- |
 | `.members` | `list[StaffMember]` | Flatten co-owner/admin/mod/helper maps into one list. |
+| `.co_owner_members` | `list[StaffMember]` | Co-owner staff entries. |
+| `.admin_members` | `list[StaffMember]` | Admin staff entries. |
+| `.mod_members` | `list[StaffMember]` | Moderator staff entries. |
+| `.helper_members` | `list[StaffMember]` | Helper staff entries. |
 
 Minimal example:
 
 ```python
 staff = await api.staff()
-admins = [member for member in staff.members if member.role == "Admin"]
+admins = staff.admin_members
+for member in staff:
+    print(member.name, member.role)
 ```
 
 ## Log Models
@@ -219,6 +237,19 @@ admins = [member for member in staff.members if member.role == "Admin"]
 Fields: `join`, `timestamp`, `player`, `name`, `user_id`.
 
 Helper: `.timestamp_datetime() -> datetime | None`.
+
+### `ServerLogs`
+
+Fields:
+
+| Field | Type |
+| --- | --- |
+| `join_logs` | `list[JoinLogEntry]` |
+| `kill_logs` | `list[KillLogEntry]` |
+| `command_logs` | `list[CommandLogEntry]` |
+| `mod_calls` | `list[ModCallEntry]` |
+
+Returned by `api.logs("all")`.
 
 ### `KillLogEntry`
 
@@ -370,11 +401,27 @@ if result.success is False:
 Common mistake: treating `success=None` as failure. Some PRC responses may only
 include a message, so `None` means unknown.
 
+### `CommandPreview`
+
+Fields:
+
+| Field | Type |
+| --- | --- |
+| `command` | `str` |
+| `name` | `str` |
+| `allowed` | `bool` |
+| `code` | `str | None` |
+| `reason` | `str | None` |
+| `metadata` | `CommandMetadata | None` |
+
+Returned by `preview_command(...)`. It is local only and never represents a PRC
+response.
+
 ## Related Pages
 
-- [Earlier in the guide: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md)
+- [Earlier in the guide: Endpoint Reference](./Endpoint-Reference.md)
 - [Next in the guide: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
 
 ---
 
-[Previous Page: Endpoint Usage Cookbook](./Endpoint-Usage-Cookbook.md) | [Next Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)
+[Previous Page: Endpoint Reference](./Endpoint-Reference.md) | [Next Page: Typed vs Raw Responses](./Typed-vs-Raw-Responses.md)

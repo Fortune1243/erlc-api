@@ -1,9 +1,9 @@
 # Clients and Authentication
 
-`erlc-api.py` v2 exposes two public clients:
+`erlc-api.py` v3 exposes two public clients with short aliases:
 
-- `AsyncERLC` for async apps, bots, web backends, and workers.
-- `ERLC` for sync scripts and command-line tools.
+- `AsyncClient` / `AsyncERLC` for async apps, bots, web backends, and workers.
+- `Client` / `ERLC` for sync scripts and command-line tools.
 
 Both clients use the same flat method names. The only difference is whether you
 `await` the call.
@@ -37,6 +37,15 @@ from erlc_api import AsyncERLC
 async with AsyncERLC("server-key") as api:
     players = await api.players()
     print(players)
+```
+
+Alias:
+
+```python
+from erlc_api import AsyncClient
+
+async with AsyncClient.from_env() as api:
+    players = await api.players()
 ```
 
 Important options:
@@ -87,10 +96,46 @@ with ERLC("server-key") as api:
     print(api.server())
 ```
 
+Alias:
+
+```python
+from erlc_api import Client
+
+with Client.from_env() as api:
+    print(api.server())
+```
+
 Common mistakes:
 
 - Using `ERLC` inside an async Discord or FastAPI handler. Use `AsyncERLC` there.
 - Forgetting to use `with ERLC(...)` for scripts that make several calls.
+
+## Environment Constructors
+
+Both clients expose `from_env(...)`:
+
+```python
+Client.from_env(
+    server_key_var="ERLC_SERVER_KEY",
+    global_key_var="ERLC_GLOBAL_KEY",
+)
+```
+
+Defaults:
+
+| Variable | Purpose |
+| --- | --- |
+| `ERLC_SERVER_KEY` | Required server key. |
+| `ERLC_GLOBAL_KEY` | Optional global Authorization key. |
+
+Explicit `server_key=` and `global_key=` arguments override environment values.
+Missing or blank server keys raise `ValueError` before HTTP.
+
+Example:
+
+```python
+api = Client.from_env(server_key_var="MYBOT_ERLC_SERVER_KEY")
+```
 
 ## Lifecycle
 

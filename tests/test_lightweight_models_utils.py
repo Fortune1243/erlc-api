@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from erlc_api import AsyncERLC, ModelDecodeError, Player, ServerBundle, StaffList, cmd, normalize_command
-from erlc_api.models import decode_server_bundle, parse_player_identifier
+from erlc_api import AsyncERLC, ModelDecodeError, Player, ServerBundle, ServerLogs, StaffList, cmd, normalize_command
+from erlc_api.models import decode_server_bundle, decode_server_logs, parse_player_identifier
 from erlc_api.utils import diff_players, diff_queue, filter_players, find_player
 from erlc_api.web import compute_dashboard_metrics, players_to_dto, v2_bundle_to_dto
 
@@ -42,6 +42,42 @@ def test_decode_server_bundle_preserves_unknown_fields_and_to_dict() -> None:
     assert bundle.players[0].extra == {"ExtraField": "kept"}
     assert bundle.extra == {"Mystery": "preserved"}
     assert bundle.to_dict()["players"][0]["user_id"] == 100
+
+
+def test_v3_model_helpers_make_common_shapes_list_like() -> None:
+    staff = StaffList(co_owners=[3], admins={1: "Avi"}, mods={2: "Bee"}, helpers={4: "Cat"})
+    bundle = ServerBundle(
+        raw={"Players": [], "Staff": {}, "CommandLogs": []},
+        players=[],
+        staff=staff,
+        command_logs=[],
+    )
+    logs = decode_server_logs(
+        {
+            "JoinLogs": [{"Join": True, "Timestamp": 1, "Player": "Avi:100"}],
+            "KillLogs": [],
+            "CommandLogs": [{"Player": "Avi:100", "Timestamp": 2, "Command": ":h hi"}],
+            "ModCalls": [],
+            "Ignored": "kept",
+        }
+    )
+
+    assert len(staff) == 4
+    assert [member.name for member in staff] == [None, "Avi", "Bee", "Cat"]
+    assert staff[1].name == "Avi"
+    assert staff.admin_members[0].permission == "Admin"
+    assert staff.mod_members[0].name == "Bee"
+    assert staff.helper_members[0].name == "Cat"
+    assert staff.co_owner_members[0].user_id == 3
+    assert bundle.players_list == []
+    assert bundle.queue_list == []
+    assert bundle.staff_members[1].name == "Avi"
+    assert bundle.included_sections == frozenset({"players", "staff", "command_logs"})
+    assert bundle.has_section("command")
+    assert isinstance(logs, ServerLogs)
+    assert logs.command_logs[0].command == ":h hi"
+    assert logs.extra == {"Ignored": "kept"}
+    assert logs.to_dict()["join_logs"][0]["user_id"] == 100
 
 
 def test_decode_server_bundle_raises_on_wrong_top_level_shape() -> None:

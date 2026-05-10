@@ -17,16 +17,18 @@ from ._errors import (
     RobloxCommunicationError,
     ServerOfflineError,
 )
-from .client import AsyncERLC, ERLC, ValidationResult, ValidationStatus
+from .client import AsyncClient, AsyncERLC, Client, ERLC, ValidationResult, ValidationStatus
 from .commands import (
     Command,
     CommandMetadata,
+    CommandPreview,
     CommandPolicy,
     CommandPolicyError,
     CommandPolicyResult,
     cmd,
     get_command_metadata,
     normalize_command,
+    preview_command,
     validate_command,
 )
 from .models import (
@@ -43,6 +45,7 @@ from .models import (
     PlayerLocation,
     ServerBundle,
     ServerInfo,
+    ServerLogs,
     StaffList,
     StaffMember,
     Vehicle,
@@ -53,10 +56,11 @@ from .models import (
 try:
     __version__ = _package_version("erlc-api.py")
 except PackageNotFoundError:
-    __version__ = "2.4.0"
+    __version__ = "3.0.0"
 
 __all__ = [
     "APIError",
+    "AsyncClient",
     "AsyncERLC",
     "AuthError",
     "BadRequestError",
@@ -64,11 +68,13 @@ __all__ = [
     "BanList",
     "Command",
     "CommandMetadata",
+    "CommandPreview",
     "CommandPolicy",
     "CommandPolicyError",
     "CommandPolicyResult",
     "CommandLogEntry",
     "CommandResult",
+    "Client",
     "ERLC",
     "ERLCError",
     "EmergencyCall",
@@ -90,6 +96,7 @@ __all__ = [
     "RobloxCommunicationError",
     "ServerBundle",
     "ServerInfo",
+    "ServerLogs",
     "ServerOfflineError",
     "StaffList",
     "StaffMember",
@@ -102,5 +109,6 @@ __all__ = [
     "__version__",
     "normalize_command",
     "parse_player_identifier",
+    "preview_command",
     "validate_command",
 ]

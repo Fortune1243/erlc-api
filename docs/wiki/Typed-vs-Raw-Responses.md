@@ -32,10 +32,13 @@ new API fields not yet modeled by the wrapper.
 | --- | --- |
 | `api.server(raw=True)` | Full `/v2/server` response body. |
 | `api.server(players=True, raw=True)` | Full `/v2/server` response body, including `Players`. |
+| `api.bundle(raw=True)` | Full `/v2/server` response body for the selected bundle preset. |
 | `api.players(raw=True)` | Raw `Players` section list only. |
 | `api.staff(raw=True)` | Raw `Staff` section object only. |
 | `api.queue(raw=True)` | Raw `Queue` section list only. |
 | `api.join_logs(raw=True)` and other section helpers | That raw section list only. |
+| `api.logs("all", raw=True)` | Full `/v2/server` response body for the log sections. |
+| `api.logs("command", raw=True)` | Raw `CommandLogs` section list only. |
 | `api.bans(raw=True)` | Raw v1 bans mapping. |
 | `api.command(raw=True)` | Raw v2 command response. |
 | `api.request(...)` | Raw decoded response body. |

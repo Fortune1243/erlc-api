@@ -4,6 +4,10 @@
 
 - `AsyncERLC(server_key=None, global_key=None, rate_limited=True)`
 - `ERLC(server_key=None, global_key=None, rate_limited=True)`
+- `AsyncClient` alias for `AsyncERLC`
+- `Client` alias for `ERLC`
+- `AsyncERLC.from_env(server_key_var="ERLC_SERVER_KEY", global_key_var="ERLC_GLOBAL_KEY")`
+- `ERLC.from_env(server_key_var="ERLC_SERVER_KEY", global_key_var="ERLC_GLOBAL_KEY")`
 - `start()` / `close()`
 - async and sync context-manager support
 - `validate_key()` / `health_check()`
@@ -13,6 +17,7 @@
 All methods accept `server_key=` and `raw=True`.
 
 - `server(players=False, staff=False, join_logs=False, queue=False, kill_logs=False, command_logs=False, mod_calls=False, emergency_calls=False, vehicles=False, all=False, include=None)`
+- `bundle(request=None, include=None, exclude=None)`
 - `players()`
 - `staff()`
 - `queue()`
@@ -22,8 +27,10 @@ All methods accept `server_key=` and `raw=True`.
 - `mod_calls()`
 - `emergency_calls()`
 - `vehicles()`
+- `logs(kind)`
 - `bans()`
-- `command(command, dry_run=False)`
+- `preview_command(command, policy=None)`
+- `command(command, dry_run=False, policy=None)`
 - `request(method, path, params=None, json=None, headers=None)`
 
 ## Commands
@@ -36,6 +43,7 @@ All methods accept `server_key=` and `raw=True`.
 - `CommandPolicy.check(command)` / `CommandPolicy.validate(command)`
 - `CommandPolicyResult`
 - `CommandPolicyError`
+- `CommandPreview`
 - `get_command_metadata(":pm Player hi")`
 - `CommandMetadata`
 
@@ -48,6 +56,9 @@ All methods accept `server_key=` and `raw=True`.
 - `StaffMember.permission_level`
 - `Vehicle.model_name`, `Vehicle.year`, `Vehicle.owner_name`, `Vehicle.normalized_plate`
 - `CommandResult.command_id`
+- `ServerLogs`
+- `ServerBundle.players_list`, `queue_list`, `staff_members`, `included_sections`, `has_section(...)`
+- `StaffList` iteration plus `admin_members`, `mod_members`, `helper_members`, `co_owner_members`
 
 ## Security
 
@@ -92,9 +103,9 @@ Utilities are not imported by top-level `import erlc_api`.
 
 ## Related Pages
 
-- [Earlier in the guide: Commands Reference](./Commands-Reference.md)
+- [Earlier in the guide: Permission Levels](./Permission-Levels.md)
 - [Next in the guide: Utilities Reference](./Utilities-Reference.md)
 
 ---
 
-[Previous Page: Commands Reference](./Commands-Reference.md) | [Next Page: Permission Levels](./Permission-Levels.md)
+[Previous Page: Permission Levels](./Permission-Levels.md) | [Next Page: Utilities Reference](./Utilities-Reference.md)

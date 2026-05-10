@@ -3,7 +3,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from erlc_api import AsyncERLC, ERLC, RateLimitError, cmd
+from erlc_api import AsyncClient, AsyncERLC, Client, CommandPolicy, CommandPolicyError, ERLC, RateLimitError, cmd
 from erlc_api._constants import BASE_URL
 from erlc_api._http import AsyncTransport, ClientSettings, SyncTransport
 
@@ -92,6 +92,30 @@ def test_clients_default_to_current_api_domain() -> None:
     assert ERLC("key", rate_limited=False).settings.base_url == BASE_URL
 
 
+def test_v3_client_aliases_and_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert Client is ERLC
+    assert AsyncClient is AsyncERLC
+
+    monkeypatch.setenv("ERLC_SERVER_KEY", " env-server ")
+    monkeypatch.setenv("ERLC_GLOBAL_KEY", " env-global ")
+
+    sync_api = ERLC.from_env(rate_limited=False)
+    async_api = AsyncERLC.from_env(rate_limited=False)
+
+    assert sync_api.server_key == "env-server"
+    assert sync_api.global_key == "env-global"
+    assert async_api.server_key == "env-server"
+    assert async_api.global_key == "env-global"
+
+    explicit = ERLC.from_env(server_key=" explicit ", global_key=" explicit-global ", rate_limited=False)
+    assert explicit.server_key == "explicit"
+    assert explicit.global_key == "explicit-global"
+
+    monkeypatch.delenv("ERLC_SERVER_KEY")
+    with pytest.raises(ValueError, match="ERLC_SERVER_KEY"):
+        ERLC.from_env(rate_limited=False)
+
+
 @pytest.mark.asyncio
 async def test_async_flat_server_returns_typed_bundle_and_headers() -> None:
     fake = _AsyncFake([_json_response(SERVER_PAYLOAD)])
@@ -171,6 +195,56 @@ async def test_async_command_uses_v2_and_flexible_builder() -> None:
     assert fake.calls[0]["json"] == {"command": ":pm Avi hello"}
 
 
+@pytest.mark.asyncio
+async def test_async_v3_bundle_logs_preview_and_policy() -> None:
+    fake = _AsyncFake(
+        [
+            _json_response(SERVER_PAYLOAD),
+            _json_response(SERVER_PAYLOAD),
+            _json_response({"message": "Success"}),
+        ]
+    )
+    transport = AsyncTransport(ClientSettings(retry_429=False))
+    transport._client = fake  # type: ignore[assignment]
+    api = AsyncERLC("key", transport=transport)
+    policy = CommandPolicy(allowed={"h"}, max_length=120)
+
+    bundle = await api.bundle()
+    logs = await api.logs("all")
+    preview = await api.preview_command("h hello", policy=policy)
+    blocked = await api.preview_command("kick Avi", policy=policy)
+    result = await api.command("h hello", policy=policy)
+
+    assert bundle.players_list[0].name == "Avi"
+    assert bundle.has_section("players")
+    assert fake.calls[0]["params"] == {
+        "Players": "true",
+        "Staff": "true",
+        "Queue": "true",
+        "EmergencyCalls": "true",
+        "Vehicles": "true",
+    }
+    assert logs.command_logs[0].command == ":h hi"
+    assert logs.to_dict()["command_logs"][0]["command"] == ":h hi"
+    assert fake.calls[1]["params"] == {
+        "JoinLogs": "true",
+        "KillLogs": "true",
+        "CommandLogs": "true",
+        "ModCalls": "true",
+    }
+    assert preview.allowed is True
+    assert preview.command == ":h hello"
+    assert preview.metadata is not None
+    assert preview.to_dict()["metadata"]["display_name"] == "Hint"
+    assert blocked.allowed is False
+    assert blocked.code == "not_allowed"
+    assert result.success is True
+    assert fake.calls[2]["json"] == {"command": ":h hello"}
+
+    with pytest.raises(CommandPolicyError):
+        await api.command("kick Avi", policy=policy)
+
+
 def test_sync_client_mirrors_flat_api() -> None:
     fake = _SyncFake([_json_response(SERVER_PAYLOAD), _json_response({"message": "Success"})])
     transport = SyncTransport(ClientSettings(retry_429=False))
@@ -180,6 +254,45 @@ def test_sync_client_mirrors_flat_api() -> None:
     assert api.players()[0].name == "Avi"
     assert api.command("h hi").success is True
     assert fake.calls[1]["json"] == {"command": ":h hi"}
+
+
+def test_sync_v3_bundle_logs_preview_and_policy() -> None:
+    bundle_payload = {key: value for key, value in SERVER_PAYLOAD.items() if key != "KillLogs"}
+    fake = _SyncFake(
+        [
+            _json_response(bundle_payload),
+            _json_response(SERVER_PAYLOAD),
+            _json_response({"message": "Success"}),
+        ]
+    )
+    transport = SyncTransport(ClientSettings(retry_429=False))
+    transport._client = fake  # type: ignore[assignment]
+    api = ERLC("key", transport=transport)
+    policy = CommandPolicy(allowed={"pm"}, max_length=120)
+
+    bundle = api.bundle("all", exclude="kill_logs")
+    command_logs = api.logs("commands")
+    preview = api.preview_command(cmd.pm("Avi", "hello"), policy=policy)
+    result = api.command(cmd.pm("Avi", "hello"), policy=policy)
+
+    assert bundle.has_section("players")
+    assert not bundle.has_section("kill_logs")
+    assert fake.calls[0]["params"] == {
+        "Players": "true",
+        "Staff": "true",
+        "JoinLogs": "true",
+        "Queue": "true",
+        "CommandLogs": "true",
+        "ModCalls": "true",
+        "EmergencyCalls": "true",
+        "Vehicles": "true",
+    }
+    assert command_logs[0].command == ":h hi"
+    assert fake.calls[1]["params"] == {"CommandLogs": "true"}
+    assert preview.allowed is True
+    assert preview.name == "pm"
+    assert result.success is True
+    assert fake.calls[2]["json"] == {"command": ":pm Avi hello"}
 
 
 @pytest.mark.asyncio

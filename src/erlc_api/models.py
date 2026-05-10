@@ -281,6 +281,31 @@ class StaffList(Model):
         out.extend(StaffMember(user_id=user_id, name=name, role="Helper") for user_id, name in self.helpers.items())
         return out
 
+    def __iter__(self):
+        return iter(self.members)
+
+    def __len__(self) -> int:
+        return len(self.members)
+
+    def __getitem__(self, index: int) -> StaffMember:
+        return self.members[index]
+
+    @property
+    def co_owner_members(self) -> list[StaffMember]:
+        return [StaffMember(user_id=user_id, name=None, role="CoOwner") for user_id in self.co_owners]
+
+    @property
+    def admin_members(self) -> list[StaffMember]:
+        return [StaffMember(user_id=user_id, name=name, role="Admin") for user_id, name in self.admins.items()]
+
+    @property
+    def mod_members(self) -> list[StaffMember]:
+        return [StaffMember(user_id=user_id, name=name, role="Mod") for user_id, name in self.mods.items()]
+
+    @property
+    def helper_members(self) -> list[StaffMember]:
+        return [StaffMember(user_id=user_id, name=name, role="Helper") for user_id, name in self.helpers.items()]
+
 
 @dataclass(frozen=True)
 class ServerInfo(Model):
@@ -484,6 +509,41 @@ class CommandResult(Model):
     command_id: str | None = None
 
 
+_SECTION_KEYS = {
+    "players": ("Players", "players"),
+    "staff": ("Staff", "staff"),
+    "join_logs": ("JoinLogs", "joinLogs", "join_logs"),
+    "queue": ("Queue", "queue"),
+    "kill_logs": ("KillLogs", "killLogs", "kill_logs"),
+    "command_logs": ("CommandLogs", "commandLogs", "command_logs"),
+    "mod_calls": ("ModCalls", "modCalls", "mod_calls"),
+    "emergency_calls": ("EmergencyCalls", "emergencyCalls", "emergency_calls"),
+    "vehicles": ("Vehicles", "vehicles"),
+}
+
+_SECTION_ALIASES = {
+    "commands": "command_logs",
+    "command": "command_logs",
+    "mods": "mod_calls",
+    "mod": "mod_calls",
+    "emergency": "emergency_calls",
+    "calls": "emergency_calls",
+}
+
+
+def _normalize_section_name(name: str) -> str:
+    key = name.strip().lower().replace("-", "_")
+    return _SECTION_ALIASES.get(key, key)
+
+
+@dataclass(frozen=True)
+class ServerLogs(Model):
+    join_logs: list[JoinLogEntry] = field(default_factory=list)
+    kill_logs: list[KillLogEntry] = field(default_factory=list)
+    command_logs: list[CommandLogEntry] = field(default_factory=list)
+    mod_calls: list[ModCallEntry] = field(default_factory=list)
+
+
 @dataclass(frozen=True)
 class ServerBundle(ServerInfo):
     players: list[Player] | None = None
@@ -513,6 +573,54 @@ class ServerBundle(ServerInfo):
         from .vehicles import PlayerVehicleBundle
 
         return PlayerVehicleBundle(self.players, self.vehicles)
+
+    @property
+    def included_sections(self) -> frozenset[str]:
+        names: set[str] = set()
+        raw_keys = set(self.raw)
+        for name, keys in _SECTION_KEYS.items():
+            if getattr(self, name) is not None or any(key in raw_keys for key in keys):
+                names.add(name)
+        return frozenset(names)
+
+    def has_section(self, name: str) -> bool:
+        return _normalize_section_name(name) in self.included_sections
+
+    @property
+    def players_list(self) -> list[Player]:
+        return self.players or []
+
+    @property
+    def queue_list(self) -> list[int]:
+        return self.queue or []
+
+    @property
+    def vehicles_list(self) -> list[Vehicle]:
+        return self.vehicles or []
+
+    @property
+    def join_logs_list(self) -> list[JoinLogEntry]:
+        return self.join_logs or []
+
+    @property
+    def kill_logs_list(self) -> list[KillLogEntry]:
+        return self.kill_logs or []
+
+    @property
+    def command_logs_list(self) -> list[CommandLogEntry]:
+        return self.command_logs or []
+
+    @property
+    def mod_calls_list(self) -> list[ModCallEntry]:
+        return self.mod_calls or []
+
+    @property
+    def emergency_calls_list(self) -> list[EmergencyCall]:
+        return self.emergency_calls or []
+
+    @property
+    def staff_members(self) -> list[StaffMember]:
+        return self.staff.members if self.staff is not None else []
 
 
 def _parse_location(raw: Mapping[str, Any]) -> PlayerLocation:
@@ -898,6 +1006,33 @@ def decode_command_result(payload: Any, *, endpoint: str = "/v2/server/command")
     )
 
 
+def decode_server_logs(payload: Any, *, endpoint: str = "/v2/server") -> ServerLogs:
+    raw = _expect_mapping(payload, endpoint=endpoint)
+    consumed: set[str] = set()
+
+    def field_value(*keys: str) -> Any:
+        key, value = _pick(raw, *keys)
+        if key:
+            consumed.add(key)
+        return value
+
+    join_logs_raw = field_value("JoinLogs", "joinLogs", "join_logs")
+    kill_logs_raw = field_value("KillLogs", "killLogs", "kill_logs")
+    command_logs_raw = field_value("CommandLogs", "commandLogs", "command_logs")
+    mod_calls_raw = field_value("ModCalls", "modCalls", "mod_calls")
+
+    return ServerLogs(
+        join_logs=decode_join_logs(join_logs_raw, endpoint=endpoint) if isinstance(join_logs_raw, list) else [],
+        kill_logs=decode_kill_logs(kill_logs_raw, endpoint=endpoint) if isinstance(kill_logs_raw, list) else [],
+        command_logs=decode_command_logs(command_logs_raw, endpoint=endpoint)
+        if isinstance(command_logs_raw, list)
+        else [],
+        mod_calls=decode_mod_calls(mod_calls_raw, endpoint=endpoint) if isinstance(mod_calls_raw, list) else [],
+        raw=dict(raw),
+        extra=_extra(raw, consumed),
+    )
+
+
 def decode_server_bundle(payload: Any, *, endpoint: str = "/v2/server") -> ServerBundle:
     raw = _expect_mapping(payload, endpoint=endpoint)
     base = _parse_server_base(raw)
@@ -963,6 +1098,7 @@ __all__ = [
     "QueueEntry",
     "ServerBundle",
     "ServerInfo",
+    "ServerLogs",
     "StaffList",
     "StaffMember",
     "V2ServerBundle",
@@ -980,6 +1116,7 @@ __all__ = [
     "decode_queue",
     "decode_server_bundle",
     "decode_server_info",
+    "decode_server_logs",
     "decode_staff",
     "decode_v2_server_bundle",
     "decode_vehicles",

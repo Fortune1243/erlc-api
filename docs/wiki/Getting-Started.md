@@ -1,12 +1,11 @@
 # Getting Started
 
 This page gets a new project from install to the first successful API call. It
-uses the public v2 surface: `AsyncERLC`, `ERLC`, flat endpoint methods, typed
-dataclasses by default, and `raw=True` only when exact PRC JSON is needed.
+uses the v3 simple path: `Client`/`AsyncClient`, `from_env()`, typed models by
+default, `bundle()` for dashboard data, and `CommandPolicy` for user-triggered
+commands.
 
 ## Install
-
-Install the PyPI package:
 
 ```bash
 pip install erlc-api.py
@@ -15,118 +14,118 @@ pip install erlc-api.py
 Import the Python package with an underscore:
 
 ```python
-from erlc_api import AsyncERLC, ERLC
+from erlc_api import AsyncClient, Client
 ```
 
-For webhook signature verification, install the optional webhook extra:
+Set your server key in the environment:
 
-```bash
-pip install "erlc-api.py[webhooks]"
+```powershell
+$env:ERLC_SERVER_KEY = "server-key"
 ```
 
-## First Async Request
+## First Sync Request
 
-Use `AsyncERLC` in bots, web apps, workers, and any code already running an
-event loop.
+Use `Client` in scripts, cron jobs, one-off admin tools, and CLIs.
 
 ```python
-from erlc_api import AsyncERLC
+from erlc_api import Client
 
 
-async with AsyncERLC("server-key") as api:
-    players = await api.players()
+with Client.from_env() as api:
+    players = api.players()
     for player in players:
         print(player.name, player.user_id, player.team)
 ```
 
 Return type: `list[Player]`.
 
-Important options:
+## First Async Request
 
-- `raw=True` returns PRC JSON instead of models.
-- `server_key=` overrides the default key for one request.
-- `retry_429=False` disables the one safe 429 retry.
-
-## First Sync Request
-
-Use `ERLC` in scripts, cron jobs, one-off admin tools, and CLIs.
+Use `AsyncClient` in Discord bots, FastAPI apps, workers, and code already
+running an event loop.
 
 ```python
-from erlc_api import ERLC
+from erlc_api import AsyncClient
 
 
-with ERLC("server-key") as api:
-    server = api.server()
+async with AsyncClient.from_env() as api:
+    server = await api.server()
     print(server.name, server.current_players, server.max_players)
 ```
 
-Return type: `ServerBundle` when using `server()`.
+## Fetch A Dashboard Bundle
 
-## Fetch A Dashboard Snapshot
-
-`server()` accepts include flags for v2 sections:
+Use `bundle()` when you want common dashboard data without remembering include
+flags:
 
 ```python
-bundle = await api.server(players=True, queue=True, staff=True)
+bundle = await api.bundle()
 
 print(bundle.name)
-print(len(bundle.players or []))
-print(len(bundle.queue or []))
-print(bundle.staff.members if bundle.staff else [])
+print(len(bundle.players_list))
+print(len(bundle.queue_list))
+print(len(bundle.staff_members))
 ```
 
-Use `all=True` when you want every v2 section the wrapper supports:
+Use `bundle("all")` when you want every supported v2 section.
+
+## Fetch Logs
 
 ```python
-bundle = await api.server(all=True)
+command_logs = await api.logs("command")
+all_logs = await api.logs("all")
+
+print(command_logs[0].command if command_logs else "none")
+print(len(all_logs.mod_calls))
 ```
 
-## Multi-server Use
-
-Create one client with a default key and override per call:
-
-```python
-api = AsyncERLC("primary-server-key")
-
-primary_players = await api.players()
-secondary_players = await api.players(server_key="secondary-server-key")
-```
-
-Use `global_key=` only when PRC gives your application an Authorization key for
-large-app flows.
-
-## Send A Command
+## Send A Safe Command
 
 Commands can be plain strings or built with `cmd`. For bot or web input, put a
-local policy in front of command execution:
+local policy in front of execution:
 
 ```python
 from erlc_api import CommandPolicy, cmd
 
 policy = CommandPolicy(allowed={"h", "pm"}, max_length=120)
 
-await api.command(policy.validate("h Hello"))
-await api.command(policy.validate(":h Hello"))
-await api.command(policy.validate(cmd.pm("Player", "hello")))
+preview = await api.preview_command(cmd.h("Hello"), policy=policy)
+if preview.allowed:
+    await api.command(preview.command, policy=policy)
 ```
 
-The wrapper normalizes missing leading colons and validates only essentials:
-non-empty command, no newline, and a command name.
+`preview_command(...)` never sends HTTP. `command(..., policy=policy)` validates
+before sending the request.
+
+## Multi-server Use
+
+Create one client with no default key and pass keys per request, or use a
+default key and override individual calls:
+
+```python
+api = AsyncClient.from_env()
+
+primary = await api.players()
+secondary = await api.players(server_key="secondary-server-key")
+```
+
+Use `global_key=` or `ERLC_GLOBAL_KEY` only when PRC gives your application an
+Authorization key for large-app flows.
 
 ## Common Mistakes
 
 - Installing `erlc_api`; the PyPI package name is `erlc-api.py`.
 - Importing `erlc-api.py`; the Python import name is `erlc_api`.
 - Forgetting to close clients outside context managers.
+- Calling `api.command(...)` with raw user input instead of a policy-checked command.
 - Expecting utility modules from top-level `erlc_api`; import utilities
-  explicitly, such as `from erlc_api.find import Finder`.
+  explicitly, such as `from erlc_api.vehicles import VehicleTools`.
 
 ## Related Pages
 
-- [Installation and Extras](./Installation-and-Extras.md)
-- [Clients and Authentication](./Clients-and-Authentication.md)
-- [Endpoint Reference](./Endpoint-Reference.md)
+- [Earlier in the guide: Testing and Mocking](./Testing-and-Mocking.md)
+- [Next in the guide: Quickstart: Web Backend](./Quickstart-Web-Backend.md)
 
 ---
 
-[Previous Page: Installation and Extras](./Installation-and-Extras.md) | [Next Page: Quickstart: Web Backend](./Quickstart-Web-Backend.md)
+[Previous Page: Testing and Mocking](./Testing-and-Mocking.md) | [Next Page: Quickstart: Web Backend](./Quickstart-Web-Backend.md)

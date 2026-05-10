@@ -6,7 +6,7 @@ import pytest
 
 from erlc_api import CommandResult, EmergencyCall, Player, PlayerLocation, ServerBundle, StaffList, Vehicle
 from erlc_api.bundle import AsyncBundle, Bundle, BundleRegistry, BundleRequest
-from erlc_api.cache import AsyncCachedClient, CachedClient, MemoryCache
+from erlc_api.cache import READ_METHODS, AsyncCachedClient, CachedClient, MemoryCache
 from erlc_api.command_flows import CommandFlowBuilder, CommandTemplate
 from erlc_api.diagnostics import diagnose_command_result, diagnose_error, diagnose_status
 from erlc_api.discord_tools import DiscordEmbed, DiscordFormatter, chunks, safe_text
@@ -237,6 +237,7 @@ async def test_cache_sync_async_ttl_and_non_cached_commands() -> None:
     await async_cached.command("h hi")
     await async_cached.command("h hi")
     assert async_api.commands == 2
+    assert {"bundle", "logs"} <= READ_METHODS
 
 
 def test_command_flows_preview_templates_and_missing_values() -> None:

@@ -229,9 +229,9 @@ payload = await api.players(raw=True)
 
 ## Related Pages
 
-- [Earlier in the guide: Testing and Mocking](./Testing-and-Mocking.md)
+- [Earlier in the guide: Migration to v3](./Migration-to-v3.md)
 - [Next in the guide: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
 
 ---
 
-[Previous Page: Testing and Mocking](./Testing-and-Mocking.md) | [Next Page: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
+[Previous Page: Migration to v3](./Migration-to-v3.md) | [Next Page: Comparison and Why erlc-api.py](./Comparison-and-Why-erlc-api.md)
