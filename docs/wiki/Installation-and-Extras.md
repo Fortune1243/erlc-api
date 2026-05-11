@@ -53,6 +53,7 @@ Install extras only when needed:
 | Extra | Installs | Used by |
 | --- | --- | --- |
 | `webhooks` | `cryptography` | Ed25519 Event Webhook signature verification. |
+| `roblox` | Base `httpx` only | Roblox user and profile lookup through `erlc_api.roblox`. |
 | `export` | `openpyxl` | XLSX export through `Exporter(...).xlsx(...)`. |
 | `time` | `python-dateutil` | Enhanced timestamp parsing. |
 | `rich` | `rich` | Rich terminal tables and panels. |
@@ -65,6 +66,7 @@ Examples:
 
 ```bash
 pip install "erlc-api.py[webhooks]"
+pip install "erlc-api.py[roblox]"
 pip install "erlc-api.py[export,rich]"
 pip install "erlc-api.py[location]"
 pip install "erlc-api.py[all]"
@@ -104,7 +106,8 @@ working.
 - Importing `erlc-api.py` instead of `erlc_api`.
 - Installing webhook verification without the `webhooks` extra.
 - Expecting optional XLSX, rich, location rendering, or enhanced time parsing dependencies in the
-  base install.
+  base install. Roblox lookup uses the base `httpx` dependency; the `roblox`
+  extra exists so install commands can be explicit.
 
 ## Related Pages
 

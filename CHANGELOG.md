@@ -2,6 +2,20 @@
 
 Format follows the spirit of [Keep a Changelog](https://keepachangelog.com/).
 
+## [3.1.0] - 2026-05-11
+
+### Added
+
+- Added lazy `erlc_api.roblox` with `RobloxClient`, `AsyncRobloxClient`, `RobloxUser`, TTL caching, raw payload access, username lookup, batch user lookup, and module-local Roblox errors.
+- Added a `roblox` install extra for explicit Roblox lookup installs without adding a new base dependency.
+- Added Roblox utility docs, README discoverability, navigation links, and focused tests for sync, async, cache, raw, missing-user, rate-limit, API-error, and network-error behavior.
+- Added GitHub issue templates, a pull request template, and Dependabot configuration for repository maintenance.
+
+### Changed
+
+- Expanded README project links, utility examples, reliability guidance, support text, and license/disclaimer notes.
+- Refined repository guidance in `AGENTS.md` for the v3 public API shape, lazy utility modules, release checks, documentation, and security expectations.
+
 ## [3.0.0] - 2026-05-10
 
 ### Added

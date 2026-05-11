@@ -24,6 +24,7 @@
 ## Utility Reference
 
 * [Utilities Reference](./Utilities-Reference.md)
+* [Roblox Utils](./Roblox-Utils.md)
 * [Vehicle Tools](./Vehicle-Tools.md)
 * [Emergency Calls](./Emergency-Calls.md)
 * [Wanted Stars](./Wanted-Stars.md)

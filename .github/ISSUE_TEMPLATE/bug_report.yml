@@ -1,0 +1,67 @@
+name: Bug report
+description: Report a reproducible problem in erlc-api.py
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve erlc-api.py. Do not include raw server keys,
+        global keys, webhook secrets, or full private payloads.
+  - type: input
+    id: version
+    attributes:
+      label: erlc-api.py version
+      description: Run `python -c "import erlc_api; print(erlc_api.__version__)"`.
+      placeholder: "3.0.0"
+    validations:
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: "3.12.3"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Client/API calls
+        - Models/typing
+        - Commands/policy
+        - Rate limits/retries
+        - Webhooks/custom commands
+        - Utilities
+        - Documentation
+        - Packaging/install
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the actual behavior and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Include a minimal code sample or command sequence.
+      placeholder: |
+        1. Install ...
+        2. Run ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or logs
+      description: Redact keys and private server data before posting.
+      render: text
+    validations:
+      required: false

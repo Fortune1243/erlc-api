@@ -33,8 +33,9 @@ Utilities fall into three groups:
 
 **Workflow utilities** (2.3+) are dashboard and bot helpers — location tools,
 vehicle analysis, emergency calls, rules engine, multi-server aggregation,
-Discord payload builders, caching, status snapshots, and command flows. Use
-these when building bots, web dashboards, or multi-server operators.
+Discord payload builders, Roblox user/profile lookup, caching, status
+snapshots, and command flows. Use these when building bots, web dashboards, or
+multi-server operators.
 
 **Ops utilities** (2.1+) are operational and persistence helpers — JSONL
 snapshots, audit logging, idempotency dedupe, polling guidance, and custom
@@ -61,14 +62,15 @@ apps. They are still explicit modules and do not load from top-level
 | Discord Tools | `from erlc_api.discord_tools import DiscordFormatter` | Build plain dict Discord message/embed payloads without a Discord dependency. |
 | Diagnostics | `from erlc_api.diagnostics import diagnose_error` | Turn errors, rate limits, command results, and statuses into user-facing diagnostics. |
 | Cache | `from erlc_api.cache import AsyncCachedClient, CachedClient` | Explicit memory TTL caching for read endpoints plus adapter protocols. |
+| Roblox Utils | `from erlc_api.roblox import AsyncRobloxClient, RobloxClient` | Resolve Roblox user IDs, usernames, and public profiles with TTL caching. |
 | Status | `from erlc_api.status import AsyncStatus, StatusBuilder` | Typed dashboard status snapshots with `.to_dict()`. |
 | Command Flows | `from erlc_api.command_flows import CommandFlowBuilder` | Preview and validate command sequences without execution. |
 | Vehicle Tools | `from erlc_api.vehicles import VehicleTools` | Catalog-aware vehicle parsing, plate lookup, owner matching, and spawned-vehicle summaries. |
 | Emergency Calls | `from erlc_api.emergency import EmergencyCallTools` | Active/unresponded call filters, team summaries, and nearest-call helpers. |
 
 See [Workflow Utilities Reference](./Workflow-Utilities-Reference.md),
-[Vehicle Tools](./Vehicle-Tools.md), and [Emergency Calls](./Emergency-Calls.md)
-for the full workflow API.
+[Roblox Utils](./Roblox-Utils.md), [Vehicle Tools](./Vehicle-Tools.md), and
+[Emergency Calls](./Emergency-Calls.md) for the full workflow API.
 
 ## Ops Utilities
 
@@ -531,8 +533,8 @@ Common mistakes:
 ## Related Pages
 
 - [Earlier in the guide: Function List](./Function-List.md)
-- [Next in the guide: Vehicle Tools](./Vehicle-Tools.md)
+- [Next in the guide: Roblox Utils](./Roblox-Utils.md)
 
 ---
 
-[Previous Page: Permission Levels](./Permission-Levels.md) | [Next Page: Vehicle Tools](./Vehicle-Tools.md)
+[Previous Page: Permission Levels](./Permission-Levels.md) | [Next Page: Roblox Utils](./Roblox-Utils.md)

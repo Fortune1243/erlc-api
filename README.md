@@ -3,6 +3,8 @@
 [![PyPI](https://img.shields.io/pypi/v/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![Python](https://img.shields.io/pypi/pyversions/erlc-api.py)](https://pypi.org/project/erlc-api.py/)
 [![License](https://img.shields.io/badge/license-Custom_Attribution-blue)](LICENSE)
+[![CI](https://github.com/Fortune1243/erlc-api/actions/workflows/ci.yml/badge.svg)](https://github.com/Fortune1243/erlc-api/actions/workflows/ci.yml)
+[![Docs Build](https://github.com/Fortune1243/erlc-api/actions/workflows/docs.yml/badge.svg)](https://github.com/Fortune1243/erlc-api/actions/workflows/docs.yml)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://fortune1243.github.io/erlc-api)
 [![Last Commit](https://img.shields.io/github/last-commit/Fortune1243/erlc-api)](https://github.com/Fortune1243/erlc-api)
 
@@ -10,6 +12,10 @@
 ships matching sync and async clients, safe defaults for bots, typed dataclass
 responses, raw payload escape hatches, and optional utilities for dashboards,
 Discord bots, moderation workflows, exports, webhooks, and multi-server reads.
+
+Project links: [Changelog](CHANGELOG.md), [Contributing](CONTRIBUTING.md),
+[Security](SECURITY.md), and
+[full documentation](https://fortune1243.github.io/erlc-api).
 
 Install the package as `erlc-api.py`; import it as `erlc_api`.
 
@@ -39,6 +45,36 @@ from erlc_api import AsyncClient
 async with AsyncClient.from_env() as api:
     bundle = await api.bundle()
     print(bundle.name, len(bundle.players_list), len(bundle.queue_list))
+```
+
+Multi-server dashboards:
+
+```python
+from erlc_api import AsyncClient
+from erlc_api.multiserver import AsyncMultiServer, ServerRef
+
+servers = [
+    ServerRef("main", "main-server-key"),
+    ServerRef("academy", "academy-server-key"),
+]
+
+async with AsyncClient() as api:
+    summary = await AsyncMultiServer(api, servers).aggregate()
+    print(summary["players"], summary["errors"])
+```
+
+Webhook custom commands, after verifying the webhook signature:
+
+```python
+from erlc_api.custom_commands import CustomCommandRouter
+
+router = CustomCommandRouter(prefix=";")
+
+@router.command("ping")
+def ping(context):
+    return context.reply("pong", args=list(context.args))
+
+result = await router.dispatch({"Message": ";ping hello"})
 ```
 
 Set your key through the environment:
@@ -81,6 +117,15 @@ with Client.from_env() as api:
 `api.server()` stays lean. Use `api.bundle()` when you want player, staff,
 queue, vehicle, and emergency-call data in one typed `ServerBundle`.
 
+## Reliability Defaults
+
+Dynamic rate limiting is enabled by default. For production bots, keep
+`rate_limited=True`; if the same reads repeat often, wrap the client in
+`CachedClient` or `AsyncCachedClient` for explicit TTL caching.
+
+For larger deployments, see
+[Scaling Your App](https://fortune1243.github.io/erlc-api/Scaling-Your-App/).
+
 ## Safe Commands
 
 Command execution is explicit. For bot or web input, validate locally before
@@ -108,6 +153,7 @@ Base installs only depend on `httpx`. Extras stay opt-in:
 | Extra | Used by |
 | --- | --- |
 | `webhooks` | Event webhook Ed25519 signature verification |
+| `roblox` | Discoverable install extra for Roblox user/profile lookup |
 | `export` | XLSX export helpers |
 | `time` | Enhanced time parsing |
 | `rich` | Rich terminal tables |
@@ -128,6 +174,7 @@ The core import remains lightweight:
 
 ```python
 from erlc_api import AsyncClient, Client, CommandPolicy, PermissionLevel, cmd
+from erlc_api.roblox import AsyncRobloxClient
 from erlc_api.vehicles import VehicleTools
 from erlc_api.cache import AsyncCachedClient
 from erlc_api.webhooks import assert_valid_event_webhook_signature
@@ -135,7 +182,8 @@ from erlc_api.webhooks import assert_valid_event_webhook_signature
 
 Advanced modules include caching, filters, finders, sorting, grouping, analytics,
 export, waiters, watchers, moderation helpers, Discord payload helpers, command
-flows, webhooks, vehicle tools, emergency-call tools, and multi-server reads.
+flows, webhooks, Roblox user/profile lookup, vehicle tools, emergency-call
+tools, and multi-server reads.
 
 ## Documentation
 
@@ -167,9 +215,26 @@ python -m twine check dist/*
 
 ## Contributing
 
-Bug reports and pull requests are welcome on the [GitHub repository](https://github.com/Fortune1243/erlc-api).
+Bug reports and pull requests are welcome on the
+[GitHub repository](https://github.com/Fortune1243/erlc-api). Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a larger change.
+
 Before submitting, run `ruff check` and `pytest -q` locally.
+
+## Support
+
+For usage questions, open a GitHub issue or contact Avi on Discord as
+`avi1243`. Never share raw server keys or global keys in public logs, issues, or
+chat messages.
 
 ## License
 
-This project uses a custom attribution license. See [LICENSE](LICENSE) for details.
+This project uses a custom attribution license. You may use and modify the
+wrapper under the terms in [LICENSE](LICENSE), and redistribution or derivative
+work must preserve the required attribution. The attribution requirement is
+about crediting the wrapper and its author; it does not require exposing API
+keys, server details, or runtime secrets.
+
+## Disclaimer
+
+Independent community wrapper, not an official PRC product.

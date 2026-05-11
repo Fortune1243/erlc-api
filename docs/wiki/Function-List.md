@@ -95,6 +95,7 @@ All methods accept `server_key=` and `raw=True`.
 - `from erlc_api.cache import AsyncCachedClient, CachedClient, MemoryCache`
 - `from erlc_api.status import AsyncStatus, Status, StatusBuilder`
 - `from erlc_api.command_flows import CommandFlowBuilder, CommandTemplate`
+- `from erlc_api.roblox import AsyncRobloxClient, RobloxClient, RobloxUser`
 - `from erlc_api.vehicles import VehicleTools, PlayerVehicleBundle, parse_vehicle_name`
 - `from erlc_api.emergency import EmergencyCallTools`
 - Legacy grouped helpers remain under `erlc_api.utils`, `erlc_api.web`, `erlc_api.discord`, and `erlc_api.webhooks`.

@@ -56,7 +56,7 @@ from .models import (
 try:
     __version__ = _package_version("erlc-api.py")
 except PackageNotFoundError:
-    __version__ = "3.0.0"
+    __version__ = "3.1.0"
 
 __all__ = [
     "APIError",

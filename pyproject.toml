@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "erlc-api.py"
-version = "3.0.0"
+version = "3.1.0"
 description = "Lightweight sync and async Python wrapper for the ER:LC PRC API"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -61,6 +61,7 @@ dev = [
   "mkdocs-material>=9.5"
 ]
 webhooks = ["cryptography>=42.0"]
+roblox = []
 export = ["openpyxl>=3.1"]
 time = ["python-dateutil>=2.9"]
 rich = ["rich>=13.0"]

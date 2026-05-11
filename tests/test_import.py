@@ -64,6 +64,7 @@ names = [
     "erlc_api.security",
     "erlc_api.vehicles",
     "erlc_api.emergency",
+    "erlc_api.roblox",
     "erlc_api.webhooks",
 ]
 print(json.dumps([name for name in names if name in sys.modules]))
@@ -91,7 +92,7 @@ def test_documented_extras_exist_in_pyproject() -> None:
     pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     extras = set(pyproject["project"]["optional-dependencies"])
 
-    expected = {"dev", "webhooks", "export", "time", "rich", "scheduling", "location", "utils", "all"}
+    expected = {"dev", "webhooks", "roblox", "export", "time", "rich", "scheduling", "location", "utils", "all"}
     assert expected <= extras
 
     docs_text = "\n".join(

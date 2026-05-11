@@ -51,6 +51,20 @@ from erlc_api.find import Finder
 from erlc_api.snapshot import SnapshotStore
 ```
 
+## Can I resolve Roblox user IDs and usernames?
+
+Yes. Use the lazy Roblox utility module:
+
+```python
+from erlc_api.roblox import AsyncRobloxClient
+
+async with AsyncRobloxClient() as roblox:
+    user = await roblox.user(1)
+```
+
+Missing users return `None`; Roblox outages and rate limits raise
+`erlc_api.roblox` exceptions.
+
 ## Does the wrapper include a Discord bot framework?
 
 No. It includes framework-neutral helpers and Discord-safe formatting utilities.

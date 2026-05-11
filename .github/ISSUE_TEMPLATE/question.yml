@@ -1,0 +1,24 @@
+name: Question
+description: Ask a usage question about erlc-api.py
+title: "[Question]: "
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not post raw server keys, global keys, or webhook secrets.
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What are you trying to understand or accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Include a small code snippet, endpoint, or docs page if relevant.
+      render: python
+    validations:
+      required: false
